@@ -8,6 +8,9 @@ const ivrStatus = require('./ivr/status');
 const ivrDonate = require('./ivr/donate');
 const ivrHangup = require('./ivr/hangup');
 const adminRoutes = require('./admin/routes');
+const { ensureSeeded } = require('./db/seed');
+
+ensureSeeded();
 
 const app = express();
 
