@@ -1,0 +1,33 @@
+<%- include('partials/header', { title: 'מקומות' }) %>
+
+<h1>ניהול מקומות</h1>
+<% if (flash) { %><div class="flash"><%= flash %></div><% } %>
+
+<div class="card">
+  <p>מספר הסדר קובע גם את סדר ההצגה כאן וגם את הסדר שבו המקומות מוקראים בטלפון.</p>
+  <table>
+    <tr><th>סדר</th><th>שם המקום</th><th>פעולות</th></tr>
+    <% locations.forEach(function(loc) { %>
+    <form id="rename-<%= loc.id %>" method="post" action="/admin/locations/<%= loc.id %>/rename"></form>
+    <form id="delete-<%= loc.id %>" method="post" action="/admin/locations/<%= loc.id %>/delete" onsubmit="return confirm('למחוק את המקום?')"></form>
+    <tr>
+      <td><input type="number" name="sort_order" form="rename-<%= loc.id %>" value="<%= loc.sort_order %>" style="width:60px"></td>
+      <td><input type="text" name="name" form="rename-<%= loc.id %>" value="<%= loc.name %>"></td>
+      <td>
+        <button type="submit" form="rename-<%= loc.id %>">שמור</button>
+        <button type="submit" form="delete-<%= loc.id %>" class="danger">מחק</button>
+      </td>
+    </tr>
+    <% }) %>
+  </table>
+
+  <h3>הוספת מקום חדש</h3>
+  <form method="post" action="/admin/locations">
+    <input type="text" name="name" placeholder="שם המקום" required>
+    <button type="submit">הוסף</button>
+  </form>
+</div>
+
+<p>להגדרת כמות מיטות לכל מקום עבור חג מסוים - היכנס לעמוד <a href="/admin/holidays">ניהול חגים</a> ובחר מחזור.</p>
+
+<%- include('partials/footer') %>

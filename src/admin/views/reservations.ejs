@@ -1,0 +1,57 @@
+<%- include('partials/header', { title: 'הזמנות' }) %>
+
+<h1>הזמנות ותשלומים</h1>
+<% if (flash) { %><div class="flash"><%= flash %></div><% } %>
+
+<div class="card">
+  <form method="get" action="/admin/reservations">
+    <label>סינון לפי מחזור חג</label>
+    <select name="season_id" onchange="this.form.submit()">
+      <option value="">הכל</option>
+      <% seasons.forEach(function(s) { %>
+      <option value="<%= s.id %>" <%= String(s.id) === String(seasonId) ? 'selected' : '' %>><%= s.holiday_name %> - <%= s.year_label %></option>
+      <% }) %>
+    </select>
+  </form>
+</div>
+
+<table>
+  <tr>
+    <th>לקוח</th><th>חג</th><th>מקום</th><th>מיטות</th><th>מחיר למיטה</th><th>סה"כ</th><th>סטטוס</th><th>פעולות</th>
+  </tr>
+  <% reservations.forEach(function(r) { %>
+  <form id="count-<%= r.id %>" method="post" action="/admin/reservations/<%= r.id %>/count"></form>
+  <form id="price-<%= r.id %>" method="post" action="/admin/reservations/<%= r.id %>/price"></form>
+  <tr>
+    <td><a href="/admin/customers/<%= r.customer_id %>"><%= r.first_name || '' %> <%= r.last_name || '' %></a> (<%= r.customer_code || r.customer_id %>)</td>
+    <td><%= r.holiday_name %> <%= r.year_label %></td>
+    <td><%= r.location_name %></td>
+    <td>
+      <input type="number" min="1" name="count" form="count-<%= r.id %>" value="<%= r.bed_count %>" style="width:60px">
+      <button type="submit" form="count-<%= r.id %>">עדכן</button>
+    </td>
+    <td>
+      <input type="number" step="0.5" name="price" form="price-<%= r.id %>" value="<%= r.price_per_bed_snapshot %>" style="width:70px">
+      <button type="submit" form="price-<%= r.id %>">עדכן</button>
+    </td>
+    <td><%= r.bed_count * r.price_per_bed_snapshot %></td>
+    <td class="<%= r.status === 'paid' ? 'badge-paid' : 'badge-pending' %>"><%= r.status === 'paid' ? 'שולם' : 'ממתין לתשלום' %></td>
+    <td>
+      <% if (r.status !== 'paid') { %>
+      <form method="post" action="/admin/reservations/<%= r.id %>/mark-paid" class="inline">
+        <button type="submit">סמן כשולם</button>
+      </form>
+      <% } else { %>
+      <form method="post" action="/admin/reservations/<%= r.id %>/mark-unpaid" class="inline" onsubmit="return confirm('לבטל את סימון התשלום?')">
+        <button type="submit">בטל תשלום</button>
+      </form>
+      <% } %>
+      <form method="post" action="/admin/reservations/<%= r.id %>/cancel" class="inline" onsubmit="return confirm('למחוק את ההזמנה הזו?')">
+        <button type="submit" class="danger">מחק</button>
+      </form>
+    </td>
+  </tr>
+  <% }) %>
+</table>
+
+<%- include('partials/footer') %>

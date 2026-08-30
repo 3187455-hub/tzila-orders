@@ -1,0 +1,40 @@
+<%- include('partials/header', { title: 'לקוחות' }) %>
+
+<h1>רשימת לקוחות</h1>
+<% if (flash) { %><div class="flash"><%= flash %></div><% } %>
+
+<div class="card">
+  <form method="get" action="/admin/customers">
+    <input type="text" name="q" placeholder="חיפוש לפי כל פרט (שם, קוד, כתובת, עיר, מ.ז, כל טלפון)" value="<%= q || '' %>" style="width:320px;">
+    <button type="submit">חפש</button>
+    <a href="/admin/customers?needs_details=1" style="margin-right:12px;">לקוחות חדשים להשלמת פרטים</a>
+    <a href="/admin/customers/new" style="margin-right:12px;">+ לקוח חדש</a>
+  </form>
+</div>
+
+<table>
+  <tr>
+    <th>קוד</th><th>שם</th><th>משפחה</th><th>עיר</th><th>טלפון</th><th>פלאפון בעל</th><th>פלאפון אישה</th><th>פלאפון נוסף</th><th>מ.ז</th><th></th>
+  </tr>
+  <% customers.forEach(function(c) { %>
+  <tr>
+    <td><%= c.code || c.id %></td>
+    <td><a href="/admin/customers/<%= c.id %>"><%= c.first_name || '' %></a> <% if (c.needs_details) { %><span class="badge-pending">(להשלמת פרטים)</span><% } %></td>
+    <td><%= c.last_name || '' %></td>
+    <td><%= c.city || '' %></td>
+    <td><%= c.phone || '' %></td>
+    <td><%= c.husband_mobile || '' %></td>
+    <td><%= c.wife_mobile || '' %></td>
+    <td><%= c.extra_mobile || '' %></td>
+    <td><%= c.id_number || '' %></td>
+    <td>
+      <a href="/admin/customers/<%= c.id %>">צפייה</a> |
+      <a href="/admin/customers/<%= c.id %>/edit">עריכה</a> |
+      <a href="/admin/customers/<%= c.id %>/history">היסטוריה</a>
+      <% if (c.name_recording_path) { %> | <a href="/admin/recording/<%= c.id %>" target="_blank">הקלטה</a><% } %>
+    </td>
+  </tr>
+  <% }) %>
+</table>
+
+<%- include('partials/footer') %>

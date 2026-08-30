@@ -1,0 +1,80 @@
+# מערכת הזמנות מיטות לחג - בצילא דמהימנותא
+
+מערכת הרשמה טלפונית (ימות המשיח) + סליקת אשראי (נדרים פלוס) + פאנל ניהול
+לניהול מקומות/מיטות/חגים ורשימת לקוחות.
+
+## הרצה מקומית (לבדיקות)
+
+```
+npm install
+npm run seed      # יוצר את 6 החגים ומשתמש ניהול לפי .env
+npm start         # מריץ את השרת על http://localhost:3000
+```
+
+פאנל הניהול: http://localhost:3000/admin/login
+(שם משתמש/סיסמה נלקחים מ-ADMIN_USERNAME/ADMIN_PASSWORD בקובץ `.env`)
+
+## מבנה קבצים
+
+```
+src/
+  server.js         - נקודת הכניסה, מגדיר את כל הראוטים
+  config.js         - טוען את קובץ ה-.env
+  db/               - חיבור SQLite (node:sqlite) וסכמה
+  ivr/              - לוגיקת שלוש השלוחות הטלפוניות
+    register.js     - שלוחה 1: הרשמה
+    status.js       - שלוחה 2: בירור/תשלום/עריכה
+    donate.js       - שלוחה 3: תרומה
+    directives.js   - בניית מחרוזות תשובה לימות המשיח
+    session.js       - ניהול מצב שיחה לפי ApiCallId
+    inventory.js    - מלאי מיטות והזמנות
+    customers.js    - זיהוי/יצירת לקוחות
+  billing/
+    nedarim.js       - דירקטיבת חיוב + סנכרון טוקן בין טלפונים
+    yemotFiles.js    - קריאה/כתיבה לקבצים בימות המשיח
+  admin/            - פאנל ניהול (Express + EJS)
+data/app.sqlite     - קובץ בסיס הנתונים (נוצר אוטומטית, לא בגיט)
+```
+
+## קובץ הסודות (.env)
+
+כל קודי החיבור לימות המשיח ולנדרים פלוס וסיסמת הניהול נמצאים בקובץ
+`.env` בשורש הפרויקט (קובץ זה **לא** עולה לגיט). יש קובץ `.env.example`
+עם הסבר לכל שדה - יש להעתיק ערכים אמיתיים לתוכו.
+
+| שדה | מאיפה מקבלים |
+|---|---|
+| `YEMOT_SHARED_SECRET` | אתה בוחר בעצמך (מילת סוד), ומגדיר אותה גם בהגדרות ה-webhook בימות המשיח |
+| `YEMOT_API_TOKEN` | ממשק הניהול של ימות המשיח, הגדרות API (פורמט `מספר:סיסמה`) |
+| `YEMOT_TOKENS_FILE_PATH` | הנתיב בעץ השלוחות שבו שמור קובץ TokensByCreditCard (מוגדר בהגדרות שלוחת הסליקה) |
+| `NEDARIM_PLUS_TERMINAL_NUMBER` | נדרים פלוס - מספר מוסד |
+| `NEDARIM_PLUS_API_VALID` | תמיכת נדרים פלוס - קוד ApiValid |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | את/ה קובע/ת - להתחברות לפאנל הניהול |
+
+אחרי שינוי `.env` יש להריץ שוב `npm run seed` (רק אם שינית את פרטי הניהול) ולהפעיל מחדש את השרת.
+
+## חיבור לימות המשיח
+
+1. בממשק הניהול של ימות המשיח, בעץ השלוחות, הגדר שלוחה חיצונית (API) לכל אחת
+   משלוש השלוחות, עם `api_link` שמצביע לכתובת השרת שלך, לדוגמה:
+   - הרשמה: `https://<הכתובת-שלך>/ivr/register?secret=<YEMOT_SHARED_SECRET>`
+   - בירור/תשלום: `https://<הכתובת-שלך>/ivr/status?secret=<YEMOT_SHARED_SECRET>`
+   - תרומה: `https://<הכתובת-שלך>/ivr/donate?secret=<YEMOT_SHARED_SECRET>`
+2. הגדר `api_hangup_link` לכתובת `/ivr/hangup?secret=...` (לניקוי מצב שיחה בניתוק).
+3. **חשוב**: פרטי הפרמטרים המדויקים של דירקטיבת ה-`credit_card` ותוצאת החיוב
+   (`src/ivr/directives.js`, פונקציה `chargeCreditCard`, וטיפול בתוצאה ב-
+   `src/ivr/register.js`/`status.js`/`donate.js` תחת `case 'charging'`) מבוססים
+   על תיעוד קהילתי ולא על תיעוד רשמי מלא. יש לבצע שיחת בדיקה אמיתית ולוודא/לתקן
+   את שמות הפרמטרים במקומות המסומנים בהערה.
+
+## פריסה לשרת (מומלץ Render.com)
+
+1. פותחים חשבון ב-GitHub, יוצרים repository חדש ומעלים אליו את התיקייה הזו.
+2. פותחים חשבון ב-[Render.com](https://render.com), יוצרים "Web Service" חדש
+   מחובר ל-repository, עם:
+   - Build Command: `npm install`
+   - Start Command: `npm start`
+   - מוסיפים **Persistent Disk** (חשוב! כדי שקובץ ה-SQLite לא יימחק בכל דיפלוי) ומחברים אותו לנתיב `/opt/render/project/src/data`
+3. בעמוד ה-Environment של השירות ב-Render, מזינים את כל הערכים מ-`.env.example` (עם הערכים האמיתיים).
+4. לאחר הפריסה הראשונה, מריצים פעם אחת `npm run seed` (מ-Shell של Render) כדי ליצור את החגים ומשתמש הניהול.
+5. מזינים את כתובת ה-URL שקיבלתם מ-Render בהגדרות השלוחות בימות המשיח (שלב הקודם).

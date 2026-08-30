@@ -1,0 +1,86 @@
+<%- include('partials/header', { title: 'לקוח' }) %>
+
+<style>
+  .cform-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 20px; }
+  .cform-grid label { margin-top: 10px; font-weight: bold; font-size: 13px; color: #555; }
+  .cform-grid input { width: 100%; }
+  .cform-section-title { grid-column: 1 / -1; margin-top: 18px; margin-bottom: 4px; border-bottom: 2px solid #1f3a5f; padding-bottom: 4px; font-size: 15px; color: #1f3a5f; }
+  @media (max-width: 700px) { .cform-grid { grid-template-columns: 1fr; } }
+</style>
+
+<h1><%= customer && customer.id ? 'עריכת לקוח' : 'לקוח חדש' %></h1>
+<% if (flash) { %><div class="flash"><%= flash %></div><% } %>
+
+<div class="card">
+  <form method="post" action="<%= customer && customer.id ? '/admin/customers/' + customer.id : '/admin/customers' %>">
+    <div class="cform-grid">
+      <div class="cform-section-title">פרטי זיהוי</div>
+      <div>
+        <label>קוד לקוח</label>
+        <input type="text" name="code" value="<%= customer.code || '' %>" placeholder="<%= customer.id ? customer.id : 'ריק = ייקבע אוטומטית' %>">
+      </div>
+      <div>
+        <label>שם פרטי</label>
+        <input type="text" name="first_name" value="<%= customer.first_name || '' %>">
+      </div>
+      <div>
+        <label>בן (שם האב)</label>
+        <input type="text" name="father_name" value="<%= customer.father_name || '' %>">
+      </div>
+      <div>
+        <label>שם משפחה</label>
+        <input type="text" name="last_name" value="<%= customer.last_name || '' %>">
+      </div>
+      <div>
+        <label>מספר זהות</label>
+        <input type="text" name="id_number" value="<%= customer.id_number || '' %>">
+      </div>
+
+      <div class="cform-section-title">כתובת</div>
+      <div>
+        <label>עיר</label>
+        <input type="text" name="city" value="<%= customer.city || '' %>">
+      </div>
+      <div>
+        <label>שכונה</label>
+        <input type="text" name="neighborhood" value="<%= customer.neighborhood || '' %>">
+      </div>
+      <div>
+        <label>כתובת (רחוב)</label>
+        <input type="text" name="address" value="<%= customer.address || '' %>">
+      </div>
+      <div>
+        <label>מספר בית</label>
+        <input type="text" name="house_number" value="<%= customer.house_number || '' %>">
+      </div>
+
+      <div class="cform-section-title">טלפונים</div>
+      <div>
+        <label>טלפון</label>
+        <input type="text" name="phone" value="<%= customer.phone || '' %>">
+      </div>
+      <div>
+        <label>פלאפון בעל</label>
+        <input type="text" name="husband_mobile" value="<%= customer.husband_mobile || '' %>">
+      </div>
+      <div>
+        <label>פלאפון אישה</label>
+        <input type="text" name="wife_mobile" value="<%= customer.wife_mobile || '' %>">
+      </div>
+      <div>
+        <label>פלאפון נוסף</label>
+        <input type="text" name="extra_mobile" value="<%= customer.extra_mobile || '' %>">
+      </div>
+    </div>
+
+    <% if (customer.needs_details) { %>
+    <p style="margin-top:16px;"><label style="display:inline; font-weight:normal;"><input type="checkbox" name="clear_needs_details" style="width:auto"> סמן שהפרטים הושלמו</label></p>
+    <% } %>
+
+    <div style="margin-top:20px;"><button type="submit">שמור</button></div>
+  </form>
+</div>
+
+<a href="/admin/customers">חזרה לרשימה</a>
+
+<%- include('partials/footer') %>

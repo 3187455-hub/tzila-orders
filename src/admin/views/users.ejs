@@ -1,0 +1,45 @@
+<%- include('partials/header', { title: 'משתמשים' }) %>
+
+<h1>ניהול משתמשי מערכת</h1>
+<% if (flash) { %><div class="flash"><%= flash %></div><% } %>
+
+<div class="card">
+  <table>
+    <tr><th>שם משתמש</th><th>הרשאה</th><th>פעולות</th></tr>
+    <% users.forEach(function(u) { %>
+    <form id="role-<%= u.id %>" method="post" action="/admin/users/<%= u.id %>/role"></form>
+    <tr>
+      <td><%= u.username %> <% if (u.id === currentAdminId) { %>(אתה)<% } %></td>
+      <td>
+        <select name="role" form="role-<%= u.id %>" onchange="this.form.submit()">
+          <option value="user" <%= u.role === 'user' ? 'selected' : '' %>>משתמש</option>
+          <option value="manager" <%= u.role === 'manager' ? 'selected' : '' %>>מנהל</option>
+        </select>
+      </td>
+      <td>
+        <form method="post" action="/admin/users/<%= u.id %>/delete" class="inline" onsubmit="return confirm('למחוק את המשתמש?')">
+          <button type="submit" class="danger">מחק</button>
+        </form>
+      </td>
+    </tr>
+    <% }) %>
+  </table>
+
+  <h3>הוספת משתמש חדש</h3>
+  <form method="post" action="/admin/users">
+    <label>שם משתמש</label>
+    <input type="text" name="username" required>
+    <label>סיסמה</label>
+    <input type="password" name="password" required>
+    <label>הרשאה</label>
+    <select name="role">
+      <option value="user">משתמש</option>
+      <option value="manager">מנהל</option>
+    </select>
+    <div style="margin-top:12px;"><button type="submit">הוסף משתמש</button></div>
+  </form>
+</div>
+
+<p style="color:#777; font-size:13px;">מנהל: גישה מלאה, כולל ניהול משתמשים ועדכון יתרות זכות. משתמש: גישה לניהול השוטף (הזמנות, לקוחות, מקומות, חגים) ללא הרשאות אלו.</p>
+
+<%- include('partials/footer') %>

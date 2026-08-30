@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: tzila-orders
+    runtime: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    disk:
+      name: tzila-orders-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: YEMOT_SHARED_SECRET
+        sync: false
+      - key: YEMOT_API_TOKEN
+        sync: false
+      - key: YEMOT_TOKENS_FILE_PATH
+        sync: false
+      - key: NEDARIM_PLUS_TERMINAL_NUMBER
+        sync: false
+      - key: NEDARIM_PLUS_API_VALID
+        sync: false
+      - key: NEDARIM_PLUS_CATEGORY
+        value: בצילא
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true

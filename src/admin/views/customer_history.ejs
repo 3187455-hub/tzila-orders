@@ -1,0 +1,91 @@
+<%- include('partials/header', { title: 'היסטוריה' }) %>
+
+<h1>היסטוריה - <%= customer.first_name || '' %> <%= customer.last_name || '' %> (קוד <%= customer.code || customer.id %>)</h1>
+<p><a href="/admin/customers/<%= customer.id %>">חזרה לכרטיס הלקוח</a></p>
+
+<div class="card">
+  <h2>הזמנות (כולל שנים קודמות ומבוטלות)</h2>
+  <table>
+    <tr><th>חג</th><th>שנה</th><th>מקום</th><th>מיטות</th><th>סטטוס</th><th>נוצר בתאריך</th></tr>
+    <% if (reservations.length === 0) { %><tr><td colspan="6">אין הזמנות</td></tr><% } %>
+    <% reservations.forEach(function(r) { %>
+    <tr>
+      <td><%= r.holiday_name %></td>
+      <td><%= r.year_label %></td>
+      <td><%= r.location_name %></td>
+      <td><%= r.bed_count %></td>
+      <td class="<%= r.status === 'paid' ? 'badge-paid' : (r.status === 'cancelled' ? '' : 'badge-pending') %>">
+        <%= r.status === 'paid' ? 'שולם' : (r.status === 'cancelled' ? 'בוטל' : 'ממתין לתשלום') %>
+      </td>
+      <td><%= r.created_at %></td>
+    </tr>
+    <% }) %>
+  </table>
+</div>
+
+<div class="card">
+  <h2>חיובים</h2>
+  <table>
+    <tr><th>חויב באשראי</th><th>קוזז מזכות</th><th>סטטוס</th><th>אמצעי</th><th>אסמכתא</th><th>תאריך</th></tr>
+    <% if (charges.length === 0) { %><tr><td colspan="6">אין חיובים</td></tr><% } %>
+    <% charges.forEach(function(c) { %>
+    <tr>
+      <td><%= c.total_amount %></td>
+      <td><%= c.credit_applied || 0 %></td>
+      <td><%= c.status === 'success' ? 'הצליח' : (c.status === 'failed' ? 'נכשל' : 'ממתין') %></td>
+      <td><%= c.method %></td>
+      <td><%= c.nedarim_confirmation || '-' %></td>
+      <td><%= c.created_at %></td>
+    </tr>
+    <% }) %>
+  </table>
+</div>
+
+<div class="card">
+  <h2>תרומות</h2>
+  <table>
+    <tr><th>סכום</th><th>סטטוס</th><th>תאריך</th></tr>
+    <% if (donations.length === 0) { %><tr><td colspan="3">אין תרומות</td></tr><% } %>
+    <% donations.forEach(function(d) { %>
+    <tr>
+      <td><%= d.amount %></td>
+      <td><%= d.status === 'success' ? 'הצליחה' : (d.status === 'failed' ? 'נכשלה' : 'ממתינה') %></td>
+      <td><%= d.created_at %></td>
+    </tr>
+    <% }) %>
+  </table>
+</div>
+
+<div class="card">
+  <h2>יתרת זכות</h2>
+  <table>
+    <tr><th>סכום</th><th>סיבה</th><th>תאריך</th></tr>
+    <% if (creditHistory.length === 0) { %><tr><td colspan="3">אין תנועות זכות</td></tr><% } %>
+    <% creditHistory.forEach(function(c) { %>
+    <tr>
+      <td class="<%= c.amount > 0 ? 'badge-paid' : 'badge-pending' %>"><%= c.amount > 0 ? '+' : '' %><%= c.amount %></td>
+      <td><%= c.reason || '-' %></td>
+      <td><%= c.created_at %></td>
+    </tr>
+    <% }) %>
+  </table>
+</div>
+
+<div class="card">
+  <h2>היסטוריית שיחות</h2>
+  <table>
+    <tr><th>שלוחה</th><th>טלפון שממנו התקשר</th><th>התחלה</th><th>סיום</th><th>שלב אחרון בשיחה</th></tr>
+    <% if (calls.length === 0) { %><tr><td colspan="5">אין שיחות מתועדות</td></tr><% } %>
+    <% calls.forEach(function(c) { %>
+    <tr>
+      <td><%= { register: 'הרשמה', status: 'בירור/תשלום', donate: 'תרומה' }[c.ivr_type] || c.ivr_type %></td>
+      <td><%= c.phone || '-' %></td>
+      <td><%= c.started_at %></td>
+      <td><%= c.ended_at || 'לא הסתיימה כראוי' %></td>
+      <td><%= c.final_step || '-' %></td>
+    </tr>
+    <% }) %>
+  </table>
+</div>
+
+<%- include('partials/footer') %>

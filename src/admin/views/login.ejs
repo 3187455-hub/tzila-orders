@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>התחברות - ניהול הזמנות</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main style="max-width:360px; margin-top:80px;">
+  <div class="card">
+    <h1>התחברות לפאנל ניהול</h1>
+    <% if (error) { %><div class="flash"><%= error %></div><% } %>
+    <form method="post" action="/admin/login">
+      <label>שם משתמש</label>
+      <input type="text" name="username" required style="width:100%">
+      <label>סיסמה</label>
+      <input type="password" name="password" required style="width:100%">
+      <div style="margin-top:16px;"><button type="submit">כניסה</button></div>
+    </form>
+  </div>
+</main>
+</body>
+</html>

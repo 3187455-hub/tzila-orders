@@ -1,0 +1,52 @@
+<%- include('partials/header', { title: 'חגים' }) %>
+
+<h1>ניהול חגים ומחזורי הרשמה</h1>
+<% if (flash) { %><div class="flash"><%= flash %></div><% } %>
+
+<% holidays.forEach(function(h) { %>
+<div class="card">
+  <h2>
+    <%= h.name %>
+    <form method="post" action="/admin/holidays/<%= h.id %>/delete" class="inline" onsubmit="return confirm('למחוק את החג? (רק אם אין לו מחזורים)')">
+      <button type="submit" class="danger" style="font-size:12px;">מחק חג</button>
+    </form>
+  </h2>
+
+  <table>
+    <tr><th>שנה/מחזור</th><th>פתוח?</th><th>מתאריך</th><th>עד תאריך</th><th>פעולות</th></tr>
+    <% h.seasons.forEach(function(s) { %>
+    <tr>
+      <td><%= s.year_label %></td>
+      <td><%= s.is_open ? 'פתוח' : 'סגור' %></td>
+      <td><%= s.opens_at || '-' %></td>
+      <td><%= s.closes_at || '-' %></td>
+      <td>
+        <a href="/admin/seasons/<%= s.id %>/edit">עריכת מקומות/מלאי</a>
+        <form method="post" action="/admin/seasons/<%= s.id %>/toggle" class="inline">
+          <button type="submit"><%= s.is_open ? 'סגור הרשמה' : 'פתח הרשמה' %></button>
+        </form>
+        <form method="post" action="/admin/seasons/<%= s.id %>/delete" class="inline" onsubmit="return confirm('למחוק את המחזור הזה? (אפשרי רק אם אין בו הזמנות)')">
+          <button type="submit" class="danger">מחק מחזור</button>
+        </form>
+      </td>
+    </tr>
+    <% }) %>
+  </table>
+
+  <form method="post" action="/admin/holidays/<%= h.id %>/seasons" style="margin-top:10px;">
+    <label>פתיחת מחזור הרשמה חדש - תווית שנה (למשל תשפ"ז)</label>
+    <input type="text" name="year_label" required>
+    <button type="submit">פתח מחזור חדש</button>
+  </form>
+</div>
+<% }) %>
+
+<div class="card">
+  <h3>הוספת חג חדש</h3>
+  <form method="post" action="/admin/holidays">
+    <input type="text" name="name" placeholder="שם החג" required>
+    <button type="submit">הוסף חג</button>
+  </form>
+</div>
+
+<%- include('partials/footer') %>
