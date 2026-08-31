@@ -32,8 +32,22 @@ app.use(
 function verifyYemot(req, res, next) {
   if (!config.yemot.sharedSecret) return next(); // לא הוגדר - מדלג (מומלץ להגדיר בפרודקשן)
   if (req.query.secret === config.yemot.sharedSecret) return next();
+  console.warn(`IVR request rejected (bad/missing secret): ${req.path} ${JSON.stringify(req.query)}`);
   return res.status(403).send('forbidden');
 }
+
+// לוג לכל בקשת IVR - עוזר לאבחן אם ימות המשיח בכלל הגיע לשרת ומה חזר לו
+app.use('/ivr', (req, res, next) => {
+  const params = { ...req.query };
+  delete params.secret;
+  console.log(`IVR IN  ${req.path} ${JSON.stringify(params)}`);
+  const originalSend = res.send.bind(res);
+  res.send = (body) => {
+    console.log(`IVR OUT ${req.path} -> ${body}`);
+    return originalSend(body);
+  };
+  next();
+});
 
 app.get('/ivr/register', verifyYemot, ivrRegister.handle);
 app.get('/ivr/status', verifyYemot, ivrStatus.handle);
