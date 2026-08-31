@@ -145,7 +145,7 @@ async function handle(req, res) {
       }
 
       case 'charging': {
-        const success = p('Status') === 'OK' || p('StatusNo') === '0' || p('DealSuccessfully');
+        const success = p('CreditCard_CODE') === 'OK';
         const { amountToCharge, creditToApply } = sess.data;
         finalizeReservationCharge({
           customerId: sess.customer_id,
@@ -153,7 +153,7 @@ async function handle(req, res) {
           amountCharged: amountToCharge,
           creditApplied: creditToApply,
           success,
-          confirmation: p('DealSuccessfully'),
+          confirmation: p('CreditCard_CODE'),
           method: 'phone',
         });
         session.endSession(callId);

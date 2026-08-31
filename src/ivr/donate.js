@@ -34,10 +34,10 @@ async function handle(req, res) {
       }
 
       case 'charging': {
-        const success = p('Status') === 'OK' || p('StatusNo') === '0' || p('DealSuccessfully');
+        const success = p('CreditCard_CODE') === 'OK';
         db.prepare('UPDATE donations SET status = ?, nedarim_confirmation = ? WHERE id = ?').run(
           success ? 'success' : 'failed',
-          p('DealSuccessfully') || null,
+          p('CreditCard_CODE') || null,
           sess.data.donationId
         );
         if (success) {
