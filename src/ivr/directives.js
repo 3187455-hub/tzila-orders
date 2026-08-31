@@ -39,14 +39,11 @@ function combine(...directives) {
 
 // דירקטיבת חיוב אשראי דרך נדרים פלוס (מובנה בימות המשיח - אין
 // צורך שהשרת שלנו יטפל בפרטי הכרטיס בעצמו).
+// פורמט positional מאומת מהקהילה עבור מנועי סליקה אחרים:
+// credit_card=<מנוע>,<סכום>,<מסוף>,<תשלומים>,<מטבע> - עם פרמטרים
+// נוספים (ApiValid, יצירת טוקן) כ-key=value בהמשך אותה תשובה.
 function chargeCreditCard({ amount, terminalNumber, apiValid, createToken = true, category }) {
-  const parts = [
-    'type=credit_card',
-    'credit_card_type=nedarim_plus',
-    `credit_card_terminal_number=${terminalNumber}`,
-    `nedarim_plus_ApiValid=${apiValid}`,
-    `billing_sum=${amount}`,
-  ];
+  const parts = [`credit_card=nedarim_plus,${amount},${terminalNumber},1,1`, `nedarim_plus_ApiValid=${apiValid}`];
   if (createToken) parts.push('credit_card_create_token=yes');
   if (category) parts.push(`credit_card_category_nedarim_plus=${encodeURIComponent(category)}`);
   return parts.join('&');
