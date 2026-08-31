@@ -11,6 +11,7 @@ const {
   combine,
   hangupNow,
 } = require('./directives');
+const { last } = require('./params');
 
 function startHolidayQueue(customerId) {
   const seasons = inventory.openHolidaySeasons();
@@ -82,6 +83,7 @@ function startSummary(sess) {
 
 async function handle(req, res) {
   const params = req.query;
+  const p = (name) => last(params, name);
   const callId = params.ApiCallId;
   const phone = params.ApiPhone;
   let sess = session.getSession(callId) || session.createSession(callId, null, { ivrType: 'register', phone });
@@ -104,7 +106,7 @@ async function handle(req, res) {
       }
 
       case 'record_name': {
-        const customer = customers.createMinimal({ phone, nameRecordingPath: params.NAME_REC });
+        const customer = customers.createMinimal({ phone, nameRecordingPath: p('NAME_REC') });
         const data = startHolidayQueue(customer.id);
         if (data.holidayQueue.length === 0) {
           session.updateSession(callId, { step: 'done', customerId: customer.id });
@@ -115,10 +117,10 @@ async function handle(req, res) {
       }
 
       case 'holiday_menu': {
-        if (params.HOLIDAY_NUM === '9') {
+        if (p('HOLIDAY_NUM') === '9') {
           return res.send(startSummary(sess));
         }
-        const idx = parseInt(params.HOLIDAY_NUM, 10) - 1;
+        const idx = parseInt(p('HOLIDAY_NUM'), 10) - 1;
         const seasonId = sess.data.holidayQueue[idx];
         if (!seasonId) {
           return res.send(combine(sayText('בחירה לא תקינה'), holidayMenuDirective(sess)));
@@ -136,7 +138,7 @@ async function handle(req, res) {
 
       case 'choose_location': {
         const seasonId = sess.data.currentSeasonId;
-        const idx = parseInt(params.LOC_NUM, 10) - 1;
+        const idx = parseInt(p('LOC_NUM'), 10) - 1;
         const locationId = (sess.data.currentLocations || [])[idx];
         const capacity = locationId ? inventory.getCapacity(seasonId, locationId) : null;
         if (!capacity || capacity.available_beds <= 0) {
@@ -154,7 +156,7 @@ async function handle(req, res) {
       case 'ask_bed_count': {
         const seasonId = sess.data.currentSeasonId;
         const locationId = sess.data.currentLocationId;
-        const bedCount = parseInt(params.BED_COUNT, 10);
+        const bedCount = parseInt(p('BED_COUNT'), 10);
         const capacity = inventory.getCapacity(seasonId, locationId);
         if (!bedCount || bedCount <= 0 || bedCount > capacity.available_beds) {
           return res.send(
@@ -172,7 +174,7 @@ async function handle(req, res) {
         const seasonId = sess.data.currentSeasonId;
         const locationId = sess.data.currentLocationId;
         const capacity = inventory.getCapacity(seasonId, locationId);
-        if (params.CONFIRM_COUNT === '1') {
+        if (p('CONFIRM_COUNT') === '1') {
           inventory.upsertReservation({
             customerId: sess.customer_id,
             holidaySeasonId: seasonId,
@@ -189,7 +191,7 @@ async function handle(req, res) {
 
       case 'after_location': {
         const seasonId = sess.data.currentSeasonId;
-        if (params.AFTER_LOC === '1') {
+        if (p('AFTER_LOC') === '1') {
           const { directive, empty } = locationListDirective(seasonId, sess);
           if (empty) return res.send(combine(sayText('אין עוד מקומות פנויים בחג זה'), holidayMenuDirective(sess)));
           return res.send(directive);
@@ -198,7 +200,7 @@ async function handle(req, res) {
       }
 
       case 'confirm_summary': {
-        if (params.CONFIRM_YN === '1') {
+        if (p('CONFIRM_YN') === '1') {
           const { totalAmount, creditToApply } = sess.data;
           if (totalAmount <= 0) {
             finalizeReservationCharge({ customerId: sess.customer_id, callId, amountCharged: 0, creditApplied: creditToApply, success: true, method: 'credit_only' });
@@ -223,7 +225,7 @@ async function handle(req, res) {
       case 'charging': {
         // תוצאת החיוב - שמות הפרמטרים המדויקים טרם אומתו מול חשבון אמיתי,
         // יש להתאים כאן לפי מה שיתקבל בפועל בשיחת בדיקה.
-        const success = params.Status === 'OK' || params.StatusNo === '0' || params.DealSuccessfully;
+        const success = p('Status') === 'OK' || p('StatusNo') === '0' || p('DealSuccessfully');
         const { totalAmount, creditToApply } = sess.data;
         finalizeReservationCharge({
           customerId: sess.customer_id,
@@ -231,7 +233,7 @@ async function handle(req, res) {
           amountCharged: totalAmount,
           creditApplied: creditToApply,
           success,
-          confirmation: params.DealSuccessfully,
+          confirmation: p('DealSuccessfully'),
           method: 'phone',
         });
 

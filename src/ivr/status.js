@@ -6,6 +6,7 @@ const nedarim = require('../billing/nedarim');
 const credit = require('../billing/credit');
 const { finalizeReservationCharge } = require('../billing/finalize');
 const { sayText, readDigits, combine, hangupNow } = require('./directives');
+const { last } = require('./params');
 
 function buildMenuDirective(callId, customerId) {
   const all = inventory.allReservationsForCustomer(customerId);
@@ -58,6 +59,7 @@ function buildEditListDirective(callId, customerId) {
 
 async function handle(req, res) {
   const params = req.query;
+  const p = (name) => last(params, name);
   const callId = params.ApiCallId;
   const phone = params.ApiPhone;
   let sess = session.getSession(callId) || session.createSession(callId, null, { ivrType: 'status', phone });
@@ -75,7 +77,7 @@ async function handle(req, res) {
       }
 
       case 'menu': {
-        if (params.MENU_CHOICE === '1' && sess.data.pendingTotal > 0) {
+        if (p('MENU_CHOICE') === '1' && sess.data.pendingTotal > 0) {
           const { amountToCharge, creditToApply } = sess.data;
           if (amountToCharge <= 0) {
             finalizeReservationCharge({
@@ -95,7 +97,7 @@ async function handle(req, res) {
           session.updateSession(callId, { step: 'charging' });
           return res.send(nedarim.buildChargeDirective(amountToCharge));
         }
-        if (params.MENU_CHOICE === '2') {
+        if (p('MENU_CHOICE') === '2') {
           return res.send(buildEditListDirective(callId, sess.customer_id));
         }
         session.updateSession(callId, { step: 'done' });
@@ -103,7 +105,7 @@ async function handle(req, res) {
       }
 
       case 'choose_edit_item': {
-        const idx = parseInt(params.EDIT_NUM, 10) - 1;
+        const idx = parseInt(p('EDIT_NUM'), 10) - 1;
         const reservationId = (sess.data.editList || [])[idx];
         if (!reservationId) {
           return res.send(combine(sayText('בחירה לא תקינה'), buildEditListDirective(callId, sess.customer_id)));
@@ -118,7 +120,7 @@ async function handle(req, res) {
       }
 
       case 'apply_edit': {
-        const newCount = parseInt(params.NEW_COUNT, 10);
+        const newCount = parseInt(p('NEW_COUNT'), 10);
         const reservation = db.prepare('SELECT * FROM reservations WHERE id = ?').get(sess.data.editReservationId);
         if (Number.isNaN(newCount) || newCount > sess.data.maxAllowed) {
           return res.send(
@@ -143,7 +145,7 @@ async function handle(req, res) {
       }
 
       case 'charging': {
-        const success = params.Status === 'OK' || params.StatusNo === '0' || params.DealSuccessfully;
+        const success = p('Status') === 'OK' || p('StatusNo') === '0' || p('DealSuccessfully');
         const { amountToCharge, creditToApply } = sess.data;
         finalizeReservationCharge({
           customerId: sess.customer_id,
@@ -151,7 +153,7 @@ async function handle(req, res) {
           amountCharged: amountToCharge,
           creditApplied: creditToApply,
           success,
-          confirmation: params.DealSuccessfully,
+          confirmation: p('DealSuccessfully'),
           method: 'phone',
         });
         session.endSession(callId);
