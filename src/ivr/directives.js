@@ -14,8 +14,8 @@ function readDigits(promptText, paramName, { max = 2, min = 1, timeout = 15 } = 
 }
 
 // מבקש הקלטת קול (למשל הקלטת שם) - חוזר עם נתיב קובץ ההקלטה בפרמטר
-function recordMessage(promptText, paramName, { maxSeconds = 15 } = {}) {
-  return `read=t-${promptText}=${paramName},no,${maxSeconds},,Message,yes,no,,`;
+function recordMessage(promptText, paramName, { maxSeconds = 15, timeout = 15 } = {}) {
+  return `read=t-${promptText}=${paramName},no,${maxSeconds},,${timeout},Message,yes,no,,`;
 }
 
 function goToFolder(folderPath) {
