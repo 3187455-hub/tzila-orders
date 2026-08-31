@@ -49,8 +49,14 @@ app.use('/ivr', (req, res, next) => {
   next();
 });
 
-// שלוחת אבחון זמנית - הודעה פשוטה באנגלית, בלי read, כדי לבודד תקלות
-app.get('/ivr/diag', (req, res) => res.send('id_list_message=t-Hello World testing one two three'));
+// שלוחת אבחון זמנית - לבידוד תקלות
+app.get('/ivr/diag', (req, res) => {
+  console.log('DIAG params:', JSON.stringify(req.query));
+  if (req.query.TESTKEY) {
+    return res.send(`id_list_message=t-You pressed ${req.query.TESTKEY}`);
+  }
+  return res.send('read=t-Press one=TESTKEY,no,1,1,15,Digits,yes,no,,');
+});
 
 app.get('/ivr/register', verifyYemot, ivrRegister.handle);
 app.get('/ivr/status', verifyYemot, ivrStatus.handle);
