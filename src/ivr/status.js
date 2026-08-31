@@ -39,14 +39,17 @@ function buildMenuDirective(callId, customerId) {
     }
     group.items.push(r);
   }
-  const holidayLines = byHoliday.map((g) => {
-    const itemLines = g.items.map((r) =>
-      r.status === 'paid'
-        ? `${r.bed_count} מיטות במקום ${r.location_name} שולם ${paymentMethodLabel(r.payment_method)}`
-        : `${r.bed_count} מיטות במקום ${r.location_name} טרם שולם`
-    );
-    return `לחג ${g.holiday_name}. ${itemLines.join('. ')}`;
-  });
+  const lines = [];
+  for (const g of byHoliday) {
+    lines.push(`לחג ${g.holiday_name}`);
+    for (const r of g.items) {
+      lines.push(
+        r.status === 'paid'
+          ? `${r.bed_count} מיטות במקום ${r.location_name} שולם ${paymentMethodLabel(r.payment_method)}`
+          : `${r.bed_count} מיטות במקום ${r.location_name} טרם שולם`
+      );
+    }
+  }
 
   const pendingTotal = all
     .filter((r) => r.status === 'pending_payment')
@@ -58,21 +61,23 @@ function buildMenuDirective(callId, customerId) {
 
   session.updateSession(callId, { step: 'menu', data: { pendingTotal, creditToApply, amountToCharge } });
 
-  let suffix;
   if (pendingTotal > 0) {
-    suffix = `יש לך יתרה לתשלום של ${pendingTotal} שקלים.`;
+    lines.push(`יש לך יתרה לתשלום של ${pendingTotal} שקלים`);
     if (creditToApply > 0) {
-      suffix += ` יש לך גם יתרת זכות של ${balance} שקלים ומתוכה יקוזזו ${creditToApply} שקלים.`;
-      suffix += amountToCharge > 0 ? ` יישאר לחיוב באשראי ${amountToCharge} שקלים.` : ' לא יידרש חיוב באשראי כלל.';
+      lines.push(`יש לך גם יתרת זכות של ${balance} שקלים ומתוכה יקוזזו ${creditToApply} שקלים`);
+      lines.push(amountToCharge > 0 ? `יישאר לחיוב באשראי ${amountToCharge} שקלים` : 'לא יידרש חיוב באשראי כלל');
     }
-    suffix += ' לתשלום עכשיו הקש 1. לעריכה או מחיקה של הזמנה הקש 2. לסיום הקש 9';
+    lines.push('לתשלום עכשיו הקש 1');
+    lines.push('לעריכה או מחיקה של הזמנה הקש 2');
+    lines.push('לסיום הקש 9');
   } else {
-    suffix = 'כל ההזמנות שולמו.';
-    if (balance > 0) suffix += ` יש לך יתרת זכות של ${balance} שקלים לשימוש בהזמנה הבאה.`;
-    suffix += ' לעריכה או מחיקה של הזמנה הקש 2. לסיום הקש 9';
+    lines.push('כל ההזמנות שולמו');
+    if (balance > 0) lines.push(`יש לך יתרת זכות של ${balance} שקלים לשימוש בהזמנה הבאה`);
+    lines.push('לעריכה או מחיקה של הזמנה הקש 2');
+    lines.push('לסיום הקש 9');
   }
 
-  return combine(readDigits(`${holidayLines.join('. ')}. ${suffix}`, 'MENU_CHOICE', { max: 1 }));
+  return combine(readDigits(lines, 'MENU_CHOICE', { max: 1 }));
 }
 
 function buildEditListDirective(callId, customerId) {
@@ -81,10 +86,10 @@ function buildEditListDirective(callId, customerId) {
     return combine(sayText('אין הזמנות שטרם שולמו לעריכה'), buildMenuDirective(callId, customerId));
   }
   session.updateSession(callId, { step: 'choose_edit_item', data: { editList: pending.map((r) => r.id) } });
-  const parts = pending.map(
+  const lines = pending.map(
     (r, i) => `הקש ${i + 1} עבור ${r.bed_count} מיטות במקום ${r.location_name} לחג ${r.holiday_name}`
   );
-  return combine(readDigits(parts.join('. '), 'EDIT_NUM', { max: 2 }));
+  return combine(readDigits(lines, 'EDIT_NUM', { max: 2 }));
 }
 
 async function handle(req, res) {

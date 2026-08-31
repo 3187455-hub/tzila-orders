@@ -28,8 +28,8 @@ function holidayMenuDirective(sess) {
     return `להרשמה לחג ${season ? season.holiday_name : ''} הקש ${i + 1}`;
   });
   session.updateSession(sess.call_id, { step: 'holiday_menu' });
-  const msg = `${parts.join('. ')}. כדי לשמור את המקומות שבחרת ולעבור לתשלום הקש 9`;
-  return readDigits(msg, 'HOLIDAY_NUM', { max: 1 });
+  const lines = [...parts, 'כדי לשמור את המקומות שבחרת ולעבור לתשלום הקש 9'];
+  return readDigits(lines, 'HOLIDAY_NUM', { max: 1 });
 }
 
 // כמו holidayMenuDirective, אבל גם מודיע על יתרת זכות אם יש - נועד
@@ -55,8 +55,8 @@ function locationListDirective(seasonId, sess) {
   });
   const total = locations.reduce((sum, l) => sum + l.available_beds, 0);
   const parts = locations.map((l, i) => `ל${l.location_name} נשאר ${l.available_beds} לבחירה הקש ${i + 1}`);
-  const msg = `נותרו במערכת ${total} מיטות. ${parts.join(' ')}`;
-  return { directive: readDigits(msg, 'LOC_NUM', { max: 1 }), empty: false };
+  const lines = [`נותרו במערכת ${total} מיטות`, ...parts];
+  return { directive: readDigits(lines, 'LOC_NUM', { max: 1 }), empty: false };
 }
 
 function startSummary(sess) {
@@ -78,14 +78,14 @@ function startSummary(sess) {
     data: { totalAmount: amountToCharge, originalTotal: total, creditToApply },
   });
 
-  let msg = `סיכום ההזמנה. ${lines.join('. ')}. סך הכל ${total} שקלים`;
+  const summaryLines = ['סיכום ההזמנה', ...lines, `סך הכל ${total} שקלים`];
   if (creditToApply > 0) {
-    msg += ` מתוך זה ${creditToApply} שקלים יקוזזו מיתרת הזכות שלך`;
-    msg += amountToCharge > 0 ? ` ויחויבו ${amountToCharge} שקלים באשראי` : ' ולא יידרש חיוב באשראי כלל';
+    summaryLines.push(`מתוך זה ${creditToApply} שקלים יקוזזו מיתרת הזכות שלך`);
+    summaryLines.push(amountToCharge > 0 ? `ויחויבו ${amountToCharge} שקלים באשראי` : 'לא יידרש חיוב באשראי כלל');
   }
-  msg += ' לאישור הקש 1 לביטול הקש 2';
+  summaryLines.push('לאישור הקש 1 לביטול הקש 2');
 
-  return combine(readDigits(msg, 'CONFIRM_YN', { max: 1 }));
+  return combine(readDigits(summaryLines, 'CONFIRM_YN', { max: 1 }));
 }
 
 async function handle(req, res) {
