@@ -44,15 +44,16 @@ function readDigits(promptText, paramName, { max = 2, min = 1, timeout = 15 } = 
 
 // מבקש הקלטת קול (למשל הקלטת שם) - חוזר עם נתיב קובץ ההקלטה בפרמטר
 //
-// שדה 7 הוחלף מ-"yes" ל-"no": בבדיקה חיה, אחרי הקשת סולמית לסיום
-// ההקלטה, השיחה נותקה עם ההודעה הסטנדרטית של ימות המשיח "לא הוקשה
-// בחירה" - סימן שימות המשיח נכנס לתפריט אישור מובנה (השמעה חוזרת/
-// אישור/הקלטה מחדש) שהמתקשר לא ידע להגיב לו. "no" כאן הוא ניסיון
-// לבטל את תפריט האישור המובנה הזה (לפי אנלוגיה לשדות דומים אצל
-// הקשות ספרות) - טרם אומת שהוא אכן זה השדה הנכון, יש לבדוק בשיחה
-// אמיתית ולתקן אם עדיין לא עובד.
-function recordMessage(promptText, paramName, { maxSeconds = 15, timeout = 15 } = {}) {
-  return `read=${buildSegments(promptText)}=${paramName},no,${maxSeconds},,${timeout},Message,no,no,,`;
+// מאומת מתיעוד רשמי (טבלת פרמטרים ממוספרת): הקלטת קול במודול ה-API
+// היא לא עוד "סוג" של read= (כמו שניחשנו קודם עם "Message") אלא מבנה
+// שדות שונה לגמרי, עם ערך קבוע "record" בשדה 3. זה מסביר את הניתוקים
+// המיידיים בלי צפצוף שנצפו קודם - "Message" כנראה לא היה ערך תקין
+// בכלל. מבנה: name,reuse,record,folder_move,file_name,ok,hangup,attach,min_sec,max_sec
+// - ok="no": מדלג על תפריט האישור המובנה (השמעה/אישור/הקלטה מחדש)
+//   ומאשר מיד בהקשת סולמית.
+// - hangup="yes": שומר את ההקלטה גם אם המתקשר סתם ניתק באמצע.
+function recordMessage(promptText, paramName, { minSeconds = '', maxSeconds = '' } = {}) {
+  return `read=${buildSegments(promptText)}=${paramName},yes,record,,,no,yes,yes,${minSeconds},${maxSeconds}`;
 }
 
 function goToFolder(folderPath) {
