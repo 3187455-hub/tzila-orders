@@ -72,9 +72,7 @@ function buildMenuDirective(callId, customerId) {
     suffix += ' לעריכה או מחיקה של הזמנה הקש 2. לסיום הקש 9';
   }
 
-  // ההודעה נשמעת בנפרד מהקשת הבחירה - read= ארוך מדי (הרבה הזמנות) גרם
-  // לניתוק מיידי של השיחה אצל ימות המשיח.
-  return combine(sayText(`${holidayLines.join('. ')}.`), readDigits(suffix, 'MENU_CHOICE', { max: 1 }));
+  return combine(readDigits(`${holidayLines.join('. ')}. ${suffix}`, 'MENU_CHOICE', { max: 1 }));
 }
 
 function buildEditListDirective(callId, customerId) {
@@ -86,7 +84,7 @@ function buildEditListDirective(callId, customerId) {
   const parts = pending.map(
     (r, i) => `הקש ${i + 1} עבור ${r.bed_count} מיטות במקום ${r.location_name} לחג ${r.holiday_name}`
   );
-  return combine(sayText(`${parts.join('. ')}.`), readDigits('הקש את המספר של ההזמנה לעריכה', 'EDIT_NUM', { max: 2 }));
+  return combine(readDigits(parts.join('. '), 'EDIT_NUM', { max: 2 }));
 }
 
 async function handle(req, res) {

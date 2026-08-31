@@ -28,10 +28,8 @@ function holidayMenuDirective(sess) {
     return `להרשמה לחג ${season ? season.holiday_name : ''} הקש ${i + 1}`;
   });
   session.updateSession(sess.call_id, { step: 'holiday_menu' });
-  return combine(
-    sayText(`${parts.join('. ')}.`),
-    readDigits('כדי לשמור את המקומות שבחרת ולעבור לתשלום הקש 9', 'HOLIDAY_NUM', { max: 1 })
-  );
+  const msg = `${parts.join('. ')}. כדי לשמור את המקומות שבחרת ולעבור לתשלום הקש 9`;
+  return readDigits(msg, 'HOLIDAY_NUM', { max: 1 });
 }
 
 // כמו holidayMenuDirective, אבל גם מודיע על יתרת זכות אם יש - נועד
@@ -46,19 +44,28 @@ function askBedCountDirective(available) {
   return readDigits(`כמה מיטות תרצה, עד ${available}. הקש את הכמות ולסיום הקש סולמית`, 'BED_COUNT', { max: 2 });
 }
 
-function locationListDirective(seasonId, sess) {
+// הודעת read= ארוכה מדי (רשימה של הרבה מקומות בבת אחת) גרמה לניתוק מיידי
+// של השיחה אצל ימות המשיח בבדיקה חיה - לכן מציגים את רשימת המקומות
+// בעמודים קטנים (3 בכל פעם), באורך דומה לתפריט החגים שכן עבד בבדיקה.
+const LOCATION_PAGE_SIZE = 3;
+
+function locationListDirective(seasonId, sess, page = 0) {
   const locations = inventory.locationsForSeason(seasonId).filter((l) => l.available_beds > 0);
   if (locations.length === 0) {
     return { directive: null, empty: true };
   }
-  session.updateSession(sess.call_id, { step: 'choose_location', data: { currentLocations: locations.map((l) => l.location_id) } });
+  const totalPages = Math.ceil(locations.length / LOCATION_PAGE_SIZE);
+  const currentPage = Math.min(page, totalPages - 1);
+  const pageItems = locations.slice(currentPage * LOCATION_PAGE_SIZE, currentPage * LOCATION_PAGE_SIZE + LOCATION_PAGE_SIZE);
+  session.updateSession(sess.call_id, {
+    step: 'choose_location',
+    data: { currentLocations: locations.map((l) => l.location_id), locPage: currentPage },
+  });
   const total = locations.reduce((sum, l) => sum + l.available_beds, 0);
-  const parts = locations.map((l, i) => `ל${l.location_name} נשאר ${l.available_beds} לבחירה הקש ${i + 1}`);
-  const announcement = `נותרו במערכת ${total} מיטות. ${parts.join('. ')}`;
-  // הודעת הרשימה נשמעת בנפרד מהקשת הבחירה - הודעת read= ארוכה מדי
-  // (הרבה מקומות) גרמה לניתוק מיידי של השיחה אצל ימות המשיח.
-  const directive = combine(sayText(announcement), readDigits('הקש את המספר של המקום שבחרת', 'LOC_NUM', { max: 1 }));
-  return { directive, empty: false };
+  const parts = pageItems.map((l, i) => `ל${l.location_name} נשאר ${l.available_beds} לבחירה הקש ${i + 1}`);
+  let msg = currentPage === 0 ? `נותרו במערכת ${total} מיטות. ${parts.join('. ')}` : parts.join('. ');
+  if (currentPage < totalPages - 1) msg += '. למקומות נוספים הקש 9';
+  return { directive: readDigits(msg, 'LOC_NUM', { max: 1 }), empty: false };
 }
 
 function startSummary(sess) {
@@ -144,11 +151,19 @@ async function handle(req, res) {
 
       case 'choose_location': {
         const seasonId = sess.data.currentSeasonId;
-        const idx = parseInt(p('LOC_NUM'), 10) - 1;
-        const locationId = (sess.data.currentLocations || [])[idx];
+        const locNum = p('LOC_NUM');
+        const locPage = sess.data.locPage || 0;
+        const allLocations = sess.data.currentLocations || [];
+        if (locNum === '9' && (locPage + 1) * LOCATION_PAGE_SIZE < allLocations.length) {
+          const { directive, empty } = locationListDirective(seasonId, sess, locPage + 1);
+          if (empty) return res.send(combine(sayText('אין מקומות פנויים כרגע'), holidayMenuDirective(sess)));
+          return res.send(directive);
+        }
+        const idx = locPage * LOCATION_PAGE_SIZE + (parseInt(locNum, 10) - 1);
+        const locationId = allLocations[idx];
         const capacity = locationId ? inventory.getCapacity(seasonId, locationId) : null;
         if (!capacity || capacity.available_beds <= 0) {
-          const { directive, empty } = locationListDirective(seasonId, sess);
+          const { directive, empty } = locationListDirective(seasonId, sess, locPage);
           if (empty) return res.send(combine(sayText('אין מקומות פנויים כרגע'), holidayMenuDirective(sess)));
           return res.send(combine(sayText('בחירה לא תקינה נסה שוב'), directive));
         }
