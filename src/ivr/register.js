@@ -27,7 +27,7 @@ function holidayMenuDirective(sess) {
     const season = seasons.find((s) => s.id === seasonId);
     return `להרשמה לחג ${season ? season.holiday_name : ''} הקש ${i + 1}`;
   });
-  parts.push('לסיום ומעבר לתשלום הקש 9');
+  parts.push('כדי לשמור את המקומות שבחרת ולעבור לתשלום הקש 9');
   session.updateSession(sess.call_id, { step: 'holiday_menu' });
   return readDigits(parts.join(' '), 'HOLIDAY_NUM', { max: 1 });
 }
@@ -40,6 +40,10 @@ function firstHolidayMenuDirective(sess) {
   return combine(prefix, holidayMenuDirective(sess));
 }
 
+function askBedCountDirective(available) {
+  return readDigits(`כמה מיטות תרצה, עד ${available}. הקש את הכמות ולסיום הקש סולמית`, 'BED_COUNT', { max: 2 });
+}
+
 function locationListDirective(seasonId, sess) {
   const locations = inventory.locationsForSeason(seasonId).filter((l) => l.available_beds > 0);
   if (locations.length === 0) {
@@ -47,9 +51,9 @@ function locationListDirective(seasonId, sess) {
   }
   session.updateSession(sess.call_id, { step: 'choose_location', data: { currentLocations: locations.map((l) => l.location_id) } });
   const total = locations.reduce((sum, l) => sum + l.available_beds, 0);
-  const parts = locations.map((l, i) => `ב${l.location_name} ${l.available_beds} מיטות הקש ${i + 1}`);
-  const msg = `נותרו במערכת ${total} מיטות מתוכם ${parts.join(' ')}`;
-  return { directive: readDigits(msg, 'LOC_NUM', { max: 2 }), empty: false };
+  const parts = locations.map((l, i) => `ל${l.location_name} נשאר ${l.available_beds} לבחירה הקש ${i + 1}`);
+  const msg = `נותרו במערכת ${total} מיטות. ${parts.join('. ')}`;
+  return { directive: readDigits(msg, 'LOC_NUM', { max: 1 }), empty: false };
 }
 
 function startSummary(sess) {
@@ -71,7 +75,7 @@ function startSummary(sess) {
     data: { totalAmount: amountToCharge, originalTotal: total, creditToApply },
   });
 
-  let msg = `סיכום ההזמנה ${lines.join(' ')} סך הכל ${total} שקלים`;
+  let msg = `סיכום ההזמנה. ${lines.join('. ')}. סך הכל ${total} שקלים`;
   if (creditToApply > 0) {
     msg += ` מתוך זה ${creditToApply} שקלים יקוזזו מיתרת הזכות שלך`;
     msg += amountToCharge > 0 ? ` ויחויבו ${amountToCharge} שקלים באשראי` : ' ולא יידרש חיוב באשראי כלל';
@@ -102,7 +106,7 @@ async function handle(req, res) {
           return res.send(firstHolidayMenuDirective(session.getSession(callId)));
         }
         session.updateSession(callId, { step: 'record_name' });
-        return res.send(combine(recordMessage('לא זיהינו את מספרך אנא הקלט את שמך המלא אחרי הצפצוף', 'NAME_REC')));
+        return res.send(combine(recordMessage('לא זיהינו את מספרך אנא אמור עכשיו את שמך המלא', 'NAME_REC')));
       }
 
       case 'record_name': {
@@ -125,15 +129,12 @@ async function handle(req, res) {
         if (!seasonId) {
           return res.send(combine(sayText('בחירה לא תקינה'), holidayMenuDirective(sess)));
         }
-        const seasons = inventory.openHolidaySeasons();
-        const season = seasons.find((s) => s.id === seasonId);
         session.updateSession(callId, { data: { currentSeasonId: seasonId } });
-        const confirmMsg = sayText(`בחרת להירשם לחג ${season ? season.holiday_name : ''}`);
         const { directive, empty } = locationListDirective(seasonId, session.getSession(callId));
         if (empty) {
-          return res.send(combine(confirmMsg, sayText('אין מקומות פנויים כרגע לחג זה'), holidayMenuDirective(session.getSession(callId))));
+          return res.send(combine(sayText('אין מקומות פנויים כרגע לחג זה'), holidayMenuDirective(session.getSession(callId))));
         }
-        return res.send(combine(confirmMsg, directive));
+        return res.send(directive);
       }
 
       case 'choose_location': {
@@ -150,7 +151,7 @@ async function handle(req, res) {
           step: 'ask_bed_count',
           data: { currentLocationId: locationId, currentCapacityAvailable: capacity.available_beds, currentPricePerBed: capacity.price_per_bed },
         });
-        return res.send(readDigits(`כמה מיטות תרצה במקום זה עד ${capacity.available_beds}`, 'BED_COUNT', { max: 2 }));
+        return res.send(askBedCountDirective(capacity.available_beds));
       }
 
       case 'ask_bed_count': {
@@ -159,12 +160,7 @@ async function handle(req, res) {
         const bedCount = parseInt(p('BED_COUNT'), 10);
         const capacity = inventory.getCapacity(seasonId, locationId);
         if (!bedCount || bedCount <= 0 || bedCount > capacity.available_beds) {
-          return res.send(
-            combine(
-              sayText('כמות לא תקינה'),
-              readDigits(`כמה מיטות תרצה עד ${capacity.available_beds}`, 'BED_COUNT', { max: 2 })
-            )
-          );
+          return res.send(combine(sayText('כמות לא תקינה'), askBedCountDirective(capacity.available_beds)));
         }
         session.updateSession(callId, { step: 'confirm_count', data: { pendingBedCount: bedCount } });
         return res.send(readDigits(`בחרת ${bedCount} מיטות לאישור הקש 1 לתיקון הקש 2`, 'CONFIRM_COUNT', { max: 1 }));
@@ -186,7 +182,7 @@ async function handle(req, res) {
           return res.send(readDigits('נרשם עוד מקום באותו חג הקש 1 לחג אחר או לסיום הקש 2', 'AFTER_LOC', { max: 1 }));
         }
         session.updateSession(callId, { step: 'ask_bed_count' });
-        return res.send(readDigits(`כמה מיטות תרצה עד ${capacity.available_beds}`, 'BED_COUNT', { max: 2 }));
+        return res.send(askBedCountDirective(capacity.available_beds));
       }
 
       case 'after_location': {

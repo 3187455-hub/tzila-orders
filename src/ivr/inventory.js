@@ -87,13 +87,15 @@ function pendingReservationsForCustomer(customerId) {
 function allReservationsForCustomer(customerId) {
   return db
     .prepare(
-      `SELECT r.*, l.name AS location_name, h.name AS holiday_name, hs.year_label
+      `SELECT r.*, l.name AS location_name, h.name AS holiday_name, h.sort_order AS holiday_sort_order,
+              hs.year_label, pc.method AS payment_method
        FROM reservations r
        JOIN locations l ON l.id = r.location_id
        JOIN holiday_seasons hs ON hs.id = r.holiday_season_id
        JOIN holidays h ON h.id = hs.holiday_id
+       LEFT JOIN payment_charges pc ON pc.id = r.payment_charge_id
        WHERE r.customer_id = ? AND r.status != 'cancelled'
-       ORDER BY h.sort_order`
+       ORDER BY h.sort_order, l.sort_order`
     )
     .all(customerId);
 }
