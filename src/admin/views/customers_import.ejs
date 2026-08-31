@@ -1,0 +1,42 @@
+<%- include('partials/header', { title: 'ייבוא לקוחות' }) %>
+
+<h1>ייבוא לקוחות מקובץ</h1>
+<% if (flash) { %><div class="flash"><%= flash %></div><% } %>
+
+<div class="card">
+  <h3>איך זה עובד</h3>
+  <ol>
+    <li>הורד את קובץ הדוגמה (נפתח כרגיל באקסל) - הוא כבר מכיל את כל העמודות בשמות הנכונים ושורת דוגמה אחת.</li>
+    <li>מלא באקסל שורה אחת לכל לקוח, ושמור את הקובץ (באקסל: "שמירה בשם" ולבחור בסוג הקובץ CSV).</li>
+    <li>עלה כאן את הקובץ השמור ולחץ "ייבוא".</li>
+  </ol>
+  <p style="color:#777; font-size:13px;">
+    עמודת "קוד" אופציונלית: אם ממלאים קוד שכבר קיים אצל לקוח במערכת - הפרטים שלו יתעדכנו (רק העמודות שמולאו בשורה, שאר הפרטים הקיימים יישארו). אם משאירים את "קוד" ריק, או ממלאים קוד חדש שלא קיים - ייווצר לקוח חדש.
+  </p>
+  <p><a href="/admin/customers/import/template.csv">⬇ הורדת קובץ דוגמה (CSV, נפתח באקסל)</a></p>
+</div>
+
+<div class="card">
+  <h3>העלאת קובץ</h3>
+  <form method="post" action="/admin/customers/import" enctype="multipart/form-data">
+    <input type="file" name="file" accept=".csv" required>
+    <button type="submit">ייבוא</button>
+  </form>
+</div>
+
+<% if (result) { %>
+<div class="card">
+  <h3>תוצאות הייבוא</h3>
+  <p>נוצרו <%= result.created %> לקוחות חדשים, עודכנו <%= result.updated %> לקוחות קיימים.</p>
+  <% if (result.errors.length) { %>
+    <p style="color:#842029;">שגיאות (<%= result.errors.length %>):</p>
+    <ul>
+      <% result.errors.forEach(function(e) { %><li><%= e %></li><% }) %>
+    </ul>
+  <% } %>
+</div>
+<% } %>
+
+<a href="/admin/customers">חזרה לרשימת הלקוחות</a>
+
+<%- include('partials/footer') %>

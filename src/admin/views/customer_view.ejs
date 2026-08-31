@@ -10,6 +10,7 @@
 <h1>
   <%= customer.first_name || '' %> <%= customer.last_name || '' %>
   <% if (customer.needs_details) { %><span class="badge-pending">(להשלמת פרטים)</span><% } %>
+  <% if (customer.blocked) { %><span class="badge-pending" style="background:#f8d7da; color:#842029;">(חסום מהזמנות)</span><% } %>
 </h1>
 <% if (flash) { %><div class="flash"><%= flash %></div><% } %>
 <p>
@@ -37,6 +38,14 @@
 </div>
 
 <% if (typeof currentRole !== 'undefined' && currentRole === 'manager') { %>
+<div class="card">
+  <h3>חסימת לקוח</h3>
+  <p style="color:#777; font-size:13px;">לקוח חסום לא יוכל להירשם למיטות חדשות בטלפון (שלוחת הרשמה), אך עדיין יוכל להתקשר לבירור ותשלום על הזמנות קיימות.</p>
+  <form method="post" action="/admin/customers/<%= customer.id %>/toggle-block">
+    <button type="submit"><%= customer.blocked ? 'בטל חסימה' : 'חסום לקוח' %></button>
+  </form>
+</div>
+
 <div class="card">
   <h3>עדכון יתרת זכות ידני</h3>
   <p style="color:#777; font-size:13px;">סכום חיובי = הוספת זכות, סכום שלילי = ניכוי זכות</p>

@@ -1,5 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const multer = require('multer');
+const { parse: parseCsv } = require('csv-parse/sync');
 const db = require('../db');
 const { requireLogin, verifyLogin } = require('./auth');
 const yemotFiles = require('../billing/yemotFiles');
@@ -299,6 +301,99 @@ router.get('/customers/new', (req, res) => {
   res.render('customer_form', { customer: {}, flash: req.query.flash });
 });
 
+// ---------- ייבוא לקוחות מקובץ CSV/אקסל ----------
+const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+
+const CUSTOMER_CSV_COLUMNS = [
+  ['קוד', 'code'],
+  ['שם', 'first_name'],
+  ['בן', 'father_name'],
+  ['משפחה', 'last_name'],
+  ['כתובת', 'address'],
+  ['מספר', 'house_number'],
+  ['עיר', 'city'],
+  ['שכונה', 'neighborhood'],
+  ['מ.ז', 'id_number'],
+  ['טלפון', 'phone'],
+  ['פלפון בעל', 'husband_mobile'],
+  ['פלפון אישה', 'wife_mobile'],
+  ['פלפון נוסף', 'extra_mobile'],
+];
+
+router.get('/customers/import', (req, res) => {
+  res.render('customers_import', { flash: req.query.flash, result: null });
+});
+
+router.get('/customers/import/template.csv', (req, res) => {
+  const headers = CUSTOMER_CSV_COLUMNS.map(([he]) => he);
+  const example = ['', 'ישראל', 'אברהם', 'כהן', 'רחוב הרב קוק', '12', 'ירושלים', 'גאולה', '123456789', '0501234567', '0521234567', '0537654321', ''];
+  const escape = (v) => `"${String(v).replace(/"/g, '""')}"`;
+  const csv = '﻿' + headers.map(escape).join(',') + '\n' + example.map(escape).join(',') + '\n';
+  res.set('Content-Type', 'text/csv; charset=utf-8');
+  res.set('Content-Disposition', 'attachment; filename="customers_template.csv"');
+  res.send(csv);
+});
+
+router.post('/customers/import', csvUpload.single('file'), (req, res) => {
+  if (!req.file) {
+    return res.render('customers_import', { flash: 'נא לבחור קובץ', result: null });
+  }
+  let content = req.file.buffer.toString('utf8');
+  if (content.charCodeAt(0) === 0xfeff) content = content.slice(1);
+
+  let records;
+  try {
+    records = parseCsv(content, { columns: true, skip_empty_lines: true, trim: true });
+  } catch (e) {
+    return res.render('customers_import', { flash: 'שגיאה בקריאת הקובץ: ' + e.message, result: null });
+  }
+
+  const findByCode = db.prepare('SELECT * FROM customers WHERE code = ?');
+  const insertStmt = db.prepare(
+    `INSERT INTO customers (code, first_name, father_name, last_name, address, house_number, city, neighborhood, id_number, phone, husband_mobile, wife_mobile, extra_mobile)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+
+  let created = 0;
+  let updated = 0;
+  const errors = [];
+
+  records.forEach((row, i) => {
+    const data = {};
+    for (const [heCol, field] of CUSTOMER_CSV_COLUMNS) {
+      const v = (row[heCol] || '').trim();
+      if (v) data[field] = v;
+    }
+    try {
+      const existing = data.code ? findByCode.get(data.code) : null;
+      if (existing) {
+        const fields = Object.keys(data).filter((k) => k !== 'code');
+        if (fields.length) {
+          const sets = fields.map((f) => `${f} = ?`).join(', ');
+          const values = fields.map((f) => data[f]);
+          db.prepare(`UPDATE customers SET ${sets} WHERE id = ?`).run(...values, existing.id);
+        }
+        updated++;
+      } else {
+        const result = insertStmt.run(
+          data.code || null, data.first_name || null, data.father_name || null, data.last_name || null,
+          data.address || null, data.house_number || null, data.city || null, data.neighborhood || null,
+          data.id_number || null, data.phone || null, data.husband_mobile || null, data.wife_mobile || null,
+          data.extra_mobile || null
+        );
+        if (!data.code) {
+          db.prepare('UPDATE customers SET code = ? WHERE id = ?').run(String(result.lastInsertRowid), result.lastInsertRowid);
+        }
+        created++;
+      }
+    } catch (e) {
+      errors.push(`שורה ${i + 2}: ${e.message}`);
+    }
+  });
+
+  res.render('customers_import', { flash: null, result: { created, updated, errors } });
+});
+
 router.post('/customers', (req, res) => {
   const b = req.body;
   try {
@@ -368,6 +463,14 @@ router.post('/customers/:id', (req, res) => {
     const msg = /UNIQUE/i.test(e.message) ? 'קוד לקוח זה כבר קיים אצל לקוח אחר' : 'שגיאה בשמירה: ' + e.message;
     console.error('customer update error', e);
     return res.render('customer_form', { customer: { ...customer, ...b }, flash: msg });
+  }
+  res.redirect(`/admin/customers/${req.params.id}`);
+});
+
+router.post('/customers/:id/toggle-block', requireManager, (req, res) => {
+  const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(req.params.id);
+  if (customer) {
+    db.prepare('UPDATE customers SET blocked = ? WHERE id = ?').run(customer.blocked ? 0 : 1, customer.id);
   }
   res.redirect(`/admin/customers/${req.params.id}`);
 });

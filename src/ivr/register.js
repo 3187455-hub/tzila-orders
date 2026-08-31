@@ -166,6 +166,10 @@ async function handle(req, res) {
     switch (sess.step) {
       case 'start': {
         const customer = customers.findByPhone(phone);
+        if (customer && customer.blocked) {
+          session.updateSession(callId, { step: 'done', customerId: customer.id });
+          return res.send(combine(sayText('לא ניתן לבצע הרשמה בשלב זה, אנא פנה למזכירות'), hangupNow()));
+        }
         if (customer) {
           const data = startHolidayQueue(customer.id);
           if (data.holidayQueue.length === 0) {
@@ -176,7 +180,14 @@ async function handle(req, res) {
           return res.send(firstHolidayMenuDirective(session.getSession(callId)));
         }
         session.updateSession(callId, { step: 'record_name' });
-        return res.send(combine(recordMessage('לא זיהינו את מספרך אנא אמור עכשיו את שמך המלא', 'NAME_REC')));
+        return res.send(
+          combine(
+            recordMessage(
+              ['לא זיהינו את מספרך אנא אמור עכשיו את שמך המלא', 'ולסיום ההקלטה הקש סולמית'],
+              'NAME_REC'
+            )
+          )
+        );
       }
 
       case 'record_name': {

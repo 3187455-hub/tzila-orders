@@ -86,6 +86,7 @@ function buildEditListDirective(callId, customerId) {
   const lines = pending.map(
     (r, i) => `הקש ${i + 1} עבור ${r.bed_count} מיטות במקום ${r.location_name} לחג ${r.holiday_name}`
   );
+  lines.push('ולסיום הקש סולמית');
   return combine(readDigits(lines, 'EDIT_NUM', { max: 2 }));
 }
 
@@ -170,12 +171,20 @@ async function handle(req, res) {
           return res.send(combine(sayText('בחירה לא תקינה'), buildEditListDirective(callId, sess.customer_id)));
         }
         const reservation = db.prepare('SELECT * FROM reservations WHERE id = ?').get(reservationId);
-        const capacity = inventory.getCapacity(reservation.holiday_season_id, reservation.location_id);
-        const maxAllowed = capacity.available_beds + reservation.bed_count;
+        const seasonOpen = inventory.isSeasonOpen(reservation.holiday_season_id);
+        // אם החג כבר נסגר להרשמה - מותר רק להקטין/לבטל, לא להגדיל
+        const maxAllowed = seasonOpen
+          ? inventory.getCapacity(reservation.holiday_season_id, reservation.location_id).available_beds + reservation.bed_count
+          : reservation.bed_count;
         session.updateSession(callId, { step: 'apply_edit', data: { editReservationId: reservationId, maxAllowed } });
-        return res.send(
-          readDigits(`הקלד כמות מיטות חדשה (עד ${maxAllowed}), או 0 למחיקת ההזמנה`, 'NEW_COUNT', { max: 2 })
-        );
+        const prompt = seasonOpen
+          ? [`הקלד כמות מיטות חדשה עד ${maxAllowed}, או 0 למחיקת ההזמנה`, 'ולסיום הקש סולמית']
+          : [
+              'ההרשמה לחג זה כבר נסגרה, ניתן רק להקטין או לבטל',
+              `הקלד כמות מיטות חדשה עד ${maxAllowed}, או 0 למחיקת ההזמנה`,
+              'ולסיום הקש סולמית',
+            ];
+        return res.send(readDigits(prompt, 'NEW_COUNT', { max: 2 }));
       }
 
       case 'apply_edit': {
@@ -185,7 +194,11 @@ async function handle(req, res) {
           return res.send(
             combine(
               sayText('כמות לא תקינה'),
-              readDigits(`הקלד כמות מיטות (עד ${sess.data.maxAllowed}), או 0 למחיקה`, 'NEW_COUNT', { max: 2 })
+              readDigits(
+                [`הקלד כמות מיטות עד ${sess.data.maxAllowed}, או 0 למחיקה`, 'ולסיום הקש סולמית'],
+                'NEW_COUNT',
+                { max: 2 }
+              )
             )
           );
         }

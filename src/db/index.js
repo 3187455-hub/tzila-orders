@@ -45,4 +45,8 @@ if (!columnExists('customers', 'card_last4')) {
   db.exec('ALTER TABLE customers ADD COLUMN card_last4 TEXT');
 }
 
+if (!columnExists('customers', 'blocked')) {
+  db.exec('ALTER TABLE customers ADD COLUMN blocked INTEGER NOT NULL DEFAULT 0');
+}
+
 module.exports = db;

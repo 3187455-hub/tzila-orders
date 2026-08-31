@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS customers (
   name_recording_path TEXT,
   card_last4 TEXT,
   needs_details INTEGER NOT NULL DEFAULT 0,
+  blocked INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

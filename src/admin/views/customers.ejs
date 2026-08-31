@@ -9,6 +9,7 @@
     <button type="submit">חפש</button>
     <a href="/admin/customers?needs_details=1" style="margin-right:12px;">לקוחות חדשים להשלמת פרטים</a>
     <a href="/admin/customers/new" style="margin-right:12px;">+ לקוח חדש</a>
+    <a href="/admin/customers/import" style="margin-right:12px;">ייבוא לקוחות מקובץ</a>
   </form>
 </div>
 
@@ -19,7 +20,7 @@
   <% customers.forEach(function(c) { %>
   <tr>
     <td><%= c.code || c.id %></td>
-    <td><a href="/admin/customers/<%= c.id %>"><%= c.first_name || '' %></a> <% if (c.needs_details) { %><span class="badge-pending">(להשלמת פרטים)</span><% } %></td>
+    <td><a href="/admin/customers/<%= c.id %>"><%= c.first_name || '' %></a> <% if (c.needs_details) { %><span class="badge-pending">(להשלמת פרטים)</span><% } %> <% if (c.blocked) { %><span class="badge-pending" style="background:#f8d7da; color:#842029;">(חסום)</span><% } %></td>
     <td><%= c.last_name || '' %></td>
     <td><%= c.city || '' %></td>
     <td><%= c.phone || '' %></td>
