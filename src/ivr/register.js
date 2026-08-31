@@ -27,9 +27,11 @@ function holidayMenuDirective(sess) {
     const season = seasons.find((s) => s.id === seasonId);
     return `להרשמה לחג ${season ? season.holiday_name : ''} הקש ${i + 1}`;
   });
-  parts.push('כדי לשמור את המקומות שבחרת ולעבור לתשלום הקש 9');
   session.updateSession(sess.call_id, { step: 'holiday_menu' });
-  return readDigits(parts.join(' '), 'HOLIDAY_NUM', { max: 1 });
+  return combine(
+    sayText(`${parts.join('. ')}.`),
+    readDigits('כדי לשמור את המקומות שבחרת ולעבור לתשלום הקש 9', 'HOLIDAY_NUM', { max: 1 })
+  );
 }
 
 // כמו holidayMenuDirective, אבל גם מודיע על יתרת זכות אם יש - נועד
@@ -52,8 +54,11 @@ function locationListDirective(seasonId, sess) {
   session.updateSession(sess.call_id, { step: 'choose_location', data: { currentLocations: locations.map((l) => l.location_id) } });
   const total = locations.reduce((sum, l) => sum + l.available_beds, 0);
   const parts = locations.map((l, i) => `ל${l.location_name} נשאר ${l.available_beds} לבחירה הקש ${i + 1}`);
-  const msg = `נותרו במערכת ${total} מיטות. ${parts.join('. ')}`;
-  return { directive: readDigits(msg, 'LOC_NUM', { max: 1 }), empty: false };
+  const announcement = `נותרו במערכת ${total} מיטות. ${parts.join('. ')}`;
+  // הודעת הרשימה נשמעת בנפרד מהקשת הבחירה - הודעת read= ארוכה מדי
+  // (הרבה מקומות) גרמה לניתוק מיידי של השיחה אצל ימות המשיח.
+  const directive = combine(sayText(announcement), readDigits('הקש את המספר של המקום שבחרת', 'LOC_NUM', { max: 1 }));
+  return { directive, empty: false };
 }
 
 function startSummary(sess) {
