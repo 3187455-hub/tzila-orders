@@ -171,20 +171,17 @@ async function handle(req, res) {
           return res.send(combine(sayText('בחירה לא תקינה'), buildEditListDirective(callId, sess.customer_id)));
         }
         const reservation = db.prepare('SELECT * FROM reservations WHERE id = ?').get(reservationId);
-        const seasonOpen = inventory.isSeasonOpen(reservation.holiday_season_id);
-        // אם החג כבר נסגר להרשמה - מותר רק להקטין/לבטל, לא להגדיל
-        const maxAllowed = seasonOpen
-          ? inventory.getCapacity(reservation.holiday_season_id, reservation.location_id).available_beds + reservation.bed_count
-          : reservation.bed_count;
+        // בשלוחת בירור ותשלום מותר רק להקטין או לבטל הזמנה קיימת, לא
+        // להגדיל אותה (הגדלה/הזמנה חדשה נעשית דרך שלוחת ההרשמה)
+        const maxAllowed = reservation.bed_count;
         session.updateSession(callId, { step: 'apply_edit', data: { editReservationId: reservationId, maxAllowed } });
-        const prompt = seasonOpen
-          ? [`הקלד כמות מיטות חדשה עד ${maxAllowed}, או 0 למחיקת ההזמנה`, 'ולסיום הקש סולמית']
-          : [
-              'ההרשמה לחג זה כבר נסגרה, ניתן רק להקטין או לבטל',
-              `הקלד כמות מיטות חדשה עד ${maxAllowed}, או 0 למחיקת ההזמנה`,
-              'ולסיום הקש סולמית',
-            ];
-        return res.send(readDigits(prompt, 'NEW_COUNT', { max: 2 }));
+        return res.send(
+          readDigits(
+            [`הקלד כמות מיטות חדשה עד ${maxAllowed}, או 0 למחיקת ההזמנה`, 'ולסיום הקש סולמית'],
+            'NEW_COUNT',
+            { max: 2 }
+          )
+        );
       }
 
       case 'apply_edit': {

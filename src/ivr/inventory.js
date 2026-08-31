@@ -39,21 +39,6 @@ function getCapacity(holidaySeasonId, locationId) {
   return locationsForSeason(holidaySeasonId).find((c) => c.location_id === locationId);
 }
 
-// האם מחזור החג עדיין פתוח להרשמה כרגע (לפי is_open וחלון הזמן) -
-// משמש כדי לדעת אם מותר להגדיל הזמנה קיימת (רק אם המחזור פתוח) או
-// שמותר רק להקטין/לבטל (אם כבר נסגר).
-function isSeasonOpen(holidaySeasonId) {
-  const row = db
-    .prepare(
-      `SELECT 1 FROM holiday_seasons
-       WHERE id = ? AND is_open = 1
-         AND (opens_at IS NULL OR opens_at <= datetime('now'))
-         AND (closes_at IS NULL OR closes_at >= datetime('now'))`
-    )
-    .get(holidaySeasonId);
-  return !!row;
-}
-
 // יצירה/עדכון של שורת הזמנה עבור לקוח+חג+מקום (ה"החזקה" של המקום)
 function upsertReservation({ customerId, holidaySeasonId, locationId, bedCount, pricePerBed }) {
   const existing = db
@@ -132,7 +117,6 @@ module.exports = {
   openHolidaySeasons,
   locationsForSeason,
   getCapacity,
-  isSeasonOpen,
   upsertReservation,
   pendingReservationsForCustomer,
   allReservationsForCustomer,

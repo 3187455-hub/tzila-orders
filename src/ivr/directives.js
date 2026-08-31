@@ -40,8 +40,16 @@ function readDigits(promptText, paramName, { max = 2, min = 1, timeout = 15 } = 
 }
 
 // מבקש הקלטת קול (למשל הקלטת שם) - חוזר עם נתיב קובץ ההקלטה בפרמטר
+//
+// שדה 7 הוחלף מ-"yes" ל-"no": בבדיקה חיה, אחרי הקשת סולמית לסיום
+// ההקלטה, השיחה נותקה עם ההודעה הסטנדרטית של ימות המשיח "לא הוקשה
+// בחירה" - סימן שימות המשיח נכנס לתפריט אישור מובנה (השמעה חוזרת/
+// אישור/הקלטה מחדש) שהמתקשר לא ידע להגיב לו. "no" כאן הוא ניסיון
+// לבטל את תפריט האישור המובנה הזה (לפי אנלוגיה לשדות דומים אצל
+// הקשות ספרות) - טרם אומת שהוא אכן זה השדה הנכון, יש לבדוק בשיחה
+// אמיתית ולתקן אם עדיין לא עובד.
 function recordMessage(promptText, paramName, { maxSeconds = 15, timeout = 15 } = {}) {
-  return `read=${buildSegments(promptText)}=${paramName},no,${maxSeconds},,${timeout},Message,yes,no,,`;
+  return `read=${buildSegments(promptText)}=${paramName},no,${maxSeconds},,${timeout},Message,no,no,,`;
 }
 
 function goToFolder(folderPath) {
