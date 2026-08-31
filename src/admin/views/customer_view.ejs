@@ -16,8 +16,10 @@
 <p>
   <a href="/admin/customers/<%= customer.id %>/edit">✎ עריכה</a> |
   <a href="/admin/customers/<%= customer.id %>/history">היסטוריית שיחות והזמנות</a>
-  <% if (customer.name_recording_path) { %> | <a href="/admin/recording/<%= customer.id %>" target="_blank">🔊 הקלטת שם</a><% } %>
 </p>
+<% if (customer.name_recording_path) { %>
+<p>🔊 הקלטת שם: <audio controls src="/admin/recording/<%= customer.id %>" style="vertical-align:middle;"></audio></p>
+<% } %>
 
 <div class="card">
   <div class="vgrid">
@@ -53,6 +55,14 @@
     <input type="number" step="0.5" name="amount" placeholder="סכום" required style="width:120px">
     <input type="text" name="reason" placeholder="סיבה (אופציונלי)" style="width:220px">
     <button type="submit">עדכן זכות</button>
+  </form>
+</div>
+
+<div class="card">
+  <h3>מחיקת לקוח</h3>
+  <p style="color:#777; font-size:13px;">ניתן למחוק רק לקוח שאין לו שום היסטוריה במערכת (הזמנות, חיובים, תרומות, יתרת זכות). פעולה זו בלתי הפיכה.</p>
+  <form method="post" action="/admin/customers/<%= customer.id %>/delete" onsubmit="return confirm('למחוק את הלקוח לצמיתות? פעולה זו בלתי הפיכה.')">
+    <button type="submit" class="danger">מחק לקוח</button>
   </form>
 </div>
 <% } %>

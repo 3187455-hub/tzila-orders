@@ -467,6 +467,18 @@ router.post('/customers/:id', (req, res) => {
   res.redirect(`/admin/customers/${req.params.id}`);
 });
 
+router.post('/customers/:id/delete', requireManager, (req, res) => {
+  try {
+    db.prepare('DELETE FROM customers WHERE id = ?').run(req.params.id);
+  } catch (e) {
+    return res.redirect(
+      `/admin/customers/${req.params.id}?flash=` +
+        encodeURIComponent('לא ניתן למחוק לקוח שיש לו היסטוריה (הזמנות/חיובים/תרומות/יתרת זכות) במערכת')
+    );
+  }
+  res.redirect('/admin/customers');
+});
+
 router.post('/customers/:id/toggle-block', requireManager, (req, res) => {
   const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(req.params.id);
   if (customer) {
