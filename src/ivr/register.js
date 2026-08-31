@@ -44,27 +44,18 @@ function askBedCountDirective(available) {
   return readDigits(`כמה מיטות תרצה, עד ${available}. הקש את הכמות ולסיום הקש סולמית`, 'BED_COUNT', { max: 2 });
 }
 
-// הודעת read= ארוכה מדי (רשימה של הרבה מקומות בבת אחת) גרמה לניתוק מיידי
-// של השיחה אצל ימות המשיח בבדיקה חיה - לכן מציגים את רשימת המקומות
-// בעמודים קטנים (3 בכל פעם), באורך דומה לתפריט החגים שכן עבד בבדיקה.
-const LOCATION_PAGE_SIZE = 3;
-
-function locationListDirective(seasonId, sess, page = 0) {
+function locationListDirective(seasonId, sess) {
   const locations = inventory.locationsForSeason(seasonId).filter((l) => l.available_beds > 0);
   if (locations.length === 0) {
     return { directive: null, empty: true };
   }
-  const totalPages = Math.ceil(locations.length / LOCATION_PAGE_SIZE);
-  const currentPage = Math.min(page, totalPages - 1);
-  const pageItems = locations.slice(currentPage * LOCATION_PAGE_SIZE, currentPage * LOCATION_PAGE_SIZE + LOCATION_PAGE_SIZE);
   session.updateSession(sess.call_id, {
     step: 'choose_location',
-    data: { currentLocations: locations.map((l) => l.location_id), locPage: currentPage },
+    data: { currentLocations: locations.map((l) => l.location_id) },
   });
   const total = locations.reduce((sum, l) => sum + l.available_beds, 0);
-  const parts = pageItems.map((l, i) => `ל${l.location_name} נשאר ${l.available_beds} לבחירה הקש ${i + 1}`);
-  let msg = currentPage === 0 ? `נותרו במערכת ${total} מיטות. ${parts.join('. ')}` : parts.join('. ');
-  if (currentPage < totalPages - 1) msg += '. למקומות נוספים הקש 9';
+  const parts = locations.map((l, i) => `ל${l.location_name} נשאר ${l.available_beds} לבחירה הקש ${i + 1}`);
+  const msg = `נותרו במערכת ${total} מיטות. ${parts.join(' ')}`;
   return { directive: readDigits(msg, 'LOC_NUM', { max: 1 }), empty: false };
 }
 
@@ -151,19 +142,11 @@ async function handle(req, res) {
 
       case 'choose_location': {
         const seasonId = sess.data.currentSeasonId;
-        const locNum = p('LOC_NUM');
-        const locPage = sess.data.locPage || 0;
-        const allLocations = sess.data.currentLocations || [];
-        if (locNum === '9' && (locPage + 1) * LOCATION_PAGE_SIZE < allLocations.length) {
-          const { directive, empty } = locationListDirective(seasonId, sess, locPage + 1);
-          if (empty) return res.send(combine(sayText('אין מקומות פנויים כרגע'), holidayMenuDirective(sess)));
-          return res.send(directive);
-        }
-        const idx = locPage * LOCATION_PAGE_SIZE + (parseInt(locNum, 10) - 1);
-        const locationId = allLocations[idx];
+        const idx = parseInt(p('LOC_NUM'), 10) - 1;
+        const locationId = (sess.data.currentLocations || [])[idx];
         const capacity = locationId ? inventory.getCapacity(seasonId, locationId) : null;
         if (!capacity || capacity.available_beds <= 0) {
-          const { directive, empty } = locationListDirective(seasonId, sess, locPage);
+          const { directive, empty } = locationListDirective(seasonId, sess);
           if (empty) return res.send(combine(sayText('אין מקומות פנויים כרגע'), holidayMenuDirective(sess)));
           return res.send(combine(sayText('בחירה לא תקינה נסה שוב'), directive));
         }
