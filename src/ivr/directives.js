@@ -8,14 +8,21 @@ function sayText(text) {
   return `id_list_message=t-${text}`;
 }
 
+// פסיקים/נקודות בתוך טקסט ההודעה של דירקטיבת read= מבלבלים את הפרסור של
+// ימות המשיח (מתפרשים כאילו הם שדות הנתונים שאחרי ה-=) וגורמים לניתוק
+// מיידי של השיחה - התגלה בבדיקה חיה. מחליפים אותם ברווח/מקף לפני שליחה.
+function sanitizeForRead(text) {
+  return text.replace(/[,.]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 // מבקש הקשות ממספר ספרות עם שם פרמטר, ומחזיר לשלב הבא בשם הזה
 function readDigits(promptText, paramName, { max = 2, min = 1, timeout = 15 } = {}) {
-  return `read=t-${promptText}=${paramName},no,${max},${min},${timeout},Digits,yes,no,,`;
+  return `read=t-${sanitizeForRead(promptText)}=${paramName},no,${max},${min},${timeout},Digits,yes,no,,`;
 }
 
 // מבקש הקלטת קול (למשל הקלטת שם) - חוזר עם נתיב קובץ ההקלטה בפרמטר
 function recordMessage(promptText, paramName, { maxSeconds = 15, timeout = 15 } = {}) {
-  return `read=t-${promptText}=${paramName},no,${maxSeconds},,${timeout},Message,yes,no,,`;
+  return `read=t-${sanitizeForRead(promptText)}=${paramName},no,${maxSeconds},,${timeout},Message,yes,no,,`;
 }
 
 function goToFolder(folderPath) {
