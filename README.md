@@ -56,12 +56,23 @@ data/app.sqlite     - קובץ בסיס הנתונים (נוצר אוטומטי�
 ## חיבור לימות המשיח
 
 1. בממשק הניהול של ימות המשיח, בעץ השלוחות, הגדר שלוחה חיצונית (API) לכל אחת
-   משלוש השלוחות, עם `api_link` שמצביע לכתובת השרת שלך, לדוגמה:
-   - הרשמה: `https://<הכתובת-שלך>/ivr/register?secret=<YEMOT_SHARED_SECRET>`
-   - בירור/תשלום: `https://<הכתובת-שלך>/ivr/status?secret=<YEMOT_SHARED_SECRET>`
-   - תרומה: `https://<הכתובת-שלך>/ivr/donate?secret=<YEMOT_SHARED_SECRET>`
-2. הגדר `api_hangup_link` לכתובת `/ivr/hangup?secret=...` (לניקוי מצב שיחה בניתוק).
-3. **חשוב**: פרטי הפרמטרים המדויקים של דירקטיבת ה-`credit_card` ותוצאת החיוב
+   משלוש השלוחות, עם `ext.ini` בערך הזה (ללא query string ב-`api_link` עצמו!):
+   ```
+   type=api
+   api_link=https://<הכתובת-שלך>/ivr/register
+   api_hangup_link=https://<הכתובת-שלך>/ivr/hangup
+   api_add_0=secret=<YEMOT_SHARED_SECRET>
+   ```
+   (ובהתאמה `/ivr/status` ו-`/ivr/donate` לשתי השלוחות האחרות)
+
+   **חשוב**: אסור לשים `?secret=...` ישירות בתוך `api_link` - ימות המשיח מוסיף
+   את הפרמטרים שלו (`ApiCallId` וכו') לכתובת עם `?` נוסף במקום `&` כשה-URL כבר
+   מכיל query string, מה שהורס את הפרמטר ומוביל לכישלון אימות שקט (המערכת
+   פשוט חוזרת לתפריט הראשי בלי שגיאה ברורה). לכן הסוד חייב לעבור דרך
+   `api_add_0=secret=...` ולא כחלק מהכתובת. שלוחת `/ivr/hangup` לא מוגנת
+   בסוד כלל (הפעולה שם לא רגישה, וכדי לא להסתמך על ה-`api_add` להתפשט גם
+   ל-`api_hangup_link`).
+2. **חשוב**: פרטי הפרמטרים המדויקים של דירקטיבת ה-`credit_card` ותוצאת החיוב
    (`src/ivr/directives.js`, פונקציה `chargeCreditCard`, וטיפול בתוצאה ב-
    `src/ivr/register.js`/`status.js`/`donate.js` תחת `case 'charging'`) מבוססים
    על תיעוד קהילתי ולא על תיעוד רשמי מלא. יש לבצע שיחת בדיקה אמיתית ולוודא/לתקן

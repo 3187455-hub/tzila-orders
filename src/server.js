@@ -52,7 +52,9 @@ app.use('/ivr', (req, res, next) => {
 app.get('/ivr/register', verifyYemot, ivrRegister.handle);
 app.get('/ivr/status', verifyYemot, ivrStatus.handle);
 app.get('/ivr/donate', verifyYemot, ivrDonate.handle);
-app.get('/ivr/hangup', verifyYemot, ivrHangup.handle);
+// api_hangup_link לא בהכרח מקבל את אותם פרמטרים סטטיים (api_add) של
+// שלוחת ה-API הראשית, ופעולת הניקוי כאן לא רגישה - לכן בלי בדיקת סוד
+app.get('/ivr/hangup', ivrHangup.handle);
 
 app.use('/admin', adminRoutes);
 
