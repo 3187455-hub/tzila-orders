@@ -56,16 +56,13 @@ function buildMenuDirective(callId, customerId) {
     .reduce((sum, r) => sum + r.bed_count * r.price_per_bed_snapshot, 0);
 
   const balance = credit.getBalance(customerId);
-  const creditToApply = Math.min(balance, pendingTotal);
-  const amountToCharge = pendingTotal - creditToApply;
 
-  session.updateSession(callId, { step: 'menu', data: { pendingTotal, creditToApply, amountToCharge } });
+  session.updateSession(callId, { step: 'menu', data: { pendingTotal } });
 
   if (pendingTotal > 0) {
     lines.push(`יש לך יתרה לתשלום של ${pendingTotal} שקלים`);
-    if (creditToApply > 0) {
-      lines.push(`יש לך גם יתרת זכות של ${balance} שקלים ומתוכה יקוזזו ${creditToApply} שקלים`);
-      lines.push(amountToCharge > 0 ? `יישאר לחיוב באשראי ${amountToCharge} שקלים` : 'לא יידרש חיוב באשראי כלל');
+    if (balance > 0) {
+      lines.push(`יש לך גם יתרת זכות של ${balance} שקלים תוכל להחליט על השימוש בה בזמן התשלום`);
     }
     lines.push('לתשלום עכשיו הקש 1');
     lines.push('לעריכה או מחיקה של הזמנה הקש 2');
@@ -92,6 +89,27 @@ function buildEditListDirective(callId, customerId) {
   return combine(readDigits(lines, 'EDIT_NUM', { max: 2 }));
 }
 
+// אחרי שהלקוח בחר אם לקזז זכות או לא (או אם אין לו זכות כלל) -
+// מבצע בפועל את החיוב, או מסיים ישר אם הקיזוז מכסה הכל.
+function startPaymentOrCredit(callId, customerId, total, creditToApply) {
+  const amountToCharge = total - creditToApply;
+  if (amountToCharge <= 0) {
+    finalizeReservationCharge({
+      customerId,
+      callId,
+      amountCharged: 0,
+      creditApplied: creditToApply,
+      success: true,
+      method: 'credit_only',
+    });
+    session.updateSession(callId, { step: 'done' });
+    session.endSession(callId);
+    return combine(sayText([`כל הסכום ${creditToApply} שקלים קוזז מיתרת הזכות שלך`, 'תודה']), hangupNow());
+  }
+  session.updateSession(callId, { step: 'charging', data: { amountToCharge, creditToApply } });
+  return nedarim.buildChargeDirective(amountToCharge);
+}
+
 async function handle(req, res) {
   const params = req.query;
   const p = (name) => last(params, name);
@@ -113,30 +131,36 @@ async function handle(req, res) {
 
       case 'menu': {
         if (p('MENU_CHOICE') === '1' && sess.data.pendingTotal > 0) {
-          const { amountToCharge, creditToApply } = sess.data;
-          if (amountToCharge <= 0) {
-            finalizeReservationCharge({
-              customerId: sess.customer_id,
-              callId,
-              amountCharged: 0,
-              creditApplied: creditToApply,
-              success: true,
-              method: 'credit_only',
-            });
-            session.updateSession(callId, { step: 'done' });
-            session.endSession(callId);
+          const { pendingTotal } = sess.data;
+          const balance = credit.getBalance(sess.customer_id);
+          if (balance > 0) {
+            session.updateSession(callId, { step: 'choose_credit', data: { checkoutTotal: pendingTotal } });
             return res.send(
-              combine(sayText(`כל הסכום, ${creditToApply} שקלים, קוזז מיתרת הזכות שלך. תודה`), hangupNow())
+              readDigits(
+                [
+                  `יש לך יתרת זכות בסך ${balance} שקלים`,
+                  'לקיזוז מהסכום עכשיו הקש 1',
+                  `להשאיר את הזכות לפעם הבאה ולשלם ${pendingTotal} שקלים באשראי הקש 2`,
+                ],
+                'CREDIT_CHOICE',
+                { max: 1 }
+              )
             );
           }
-          session.updateSession(callId, { step: 'charging' });
-          return res.send(nedarim.buildChargeDirective(amountToCharge));
+          return res.send(startPaymentOrCredit(callId, sess.customer_id, pendingTotal, 0));
         }
         if (p('MENU_CHOICE') === '2') {
           return res.send(buildEditListDirective(callId, sess.customer_id));
         }
         session.updateSession(callId, { step: 'done' });
         return res.send(combine(sayText('תודה ולהתראות'), hangupNow()));
+      }
+
+      case 'choose_credit': {
+        const { checkoutTotal } = sess.data;
+        const balance = credit.getBalance(sess.customer_id);
+        const creditToApply = p('CREDIT_CHOICE') === '1' ? Math.min(balance, checkoutTotal) : 0;
+        return res.send(startPaymentOrCredit(callId, sess.customer_id, checkoutTotal, creditToApply));
       }
 
       case 'choose_edit_item': {

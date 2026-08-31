@@ -36,7 +36,7 @@ function holidayMenuDirective(sess) {
 // לשימוש רק בפעם הראשונה בשיחה, כדי לא לחזור על ההודעה בכל פעם
 function firstHolidayMenuDirective(sess) {
   const balance = credit.getBalance(sess.customer_id);
-  const prefix = balance > 0 ? sayText(`שים לב יש לך יתרת זכות בסך ${balance} שקלים שתקוזז אוטומטית בתשלום`) : null;
+  const prefix = balance > 0 ? sayText(`שים לב יש לך יתרת זכות בסך ${balance} שקלים תוכל להחליט על השימוש בה בזמן התשלום`) : null;
   return combine(prefix, holidayMenuDirective(sess));
 }
 
@@ -59,33 +59,100 @@ function locationListDirective(seasonId, sess) {
   return { directive: readDigits(lines, 'LOC_NUM', { max: 1 }), empty: false };
 }
 
-function startSummary(sess) {
-  const customer = customers.getById(sess.customer_id);
-  const pending = inventory.pendingReservationsForCustomer(customer.id);
-  if (pending.length === 0) {
+function trimItem(r) {
+  return {
+    id: r.id,
+    bed_count: r.bed_count,
+    location_name: r.location_name,
+    holiday_name: r.holiday_name,
+    price_per_bed_snapshot: r.price_per_bed_snapshot,
+  };
+}
+
+function sumItems(items) {
+  return items.reduce((sum, r) => sum + r.bed_count * r.price_per_bed_snapshot, 0);
+}
+
+// שלב תחילת התשלום - קודם בודקים אם יש ללקוח גם חוב קודם (מהזמנות
+// שלא שולמו משיחה קודמת) בנוסף למה שהזמין עכשיו, ואם כן שואלים אותו
+// אם לשלם הכל או רק את מה שהזמין עכשיו. אחר כך ממשיכים לבדיקת זכות.
+function beginCheckout(sess) {
+  const allPending = inventory.pendingReservationsForCustomer(sess.customer_id);
+  if (allPending.length === 0) {
     session.updateSession(sess.call_id, { step: 'done' });
     return combine(sayText('לא נבחרו מיטות תודה ולהתראות'), hangupNow());
   }
-  const total = pending.reduce((sum, r) => sum + r.bed_count * r.price_per_bed_snapshot, 0);
-  const lines = pending.map((r) => `${r.bed_count} מיטות במקום ${r.location_name} לחג ${r.holiday_name}`);
+  const newIds = new Set(sess.data.newReservationIds || []);
+  const newItems = allPending.filter((r) => newIds.has(r.id)).map(trimItem);
+  const oldItems = allPending.filter((r) => !newIds.has(r.id)).map(trimItem);
 
-  const balance = credit.getBalance(customer.id);
-  const creditToApply = Math.min(balance, total);
-  const amountToCharge = total - creditToApply;
+  if (oldItems.length > 0 && newItems.length > 0) {
+    const newTotal = sumItems(newItems);
+    const oldTotal = sumItems(oldItems);
+    session.updateSession(sess.call_id, {
+      step: 'choose_pay_scope',
+      data: { checkoutNewItems: newItems, checkoutOldItems: oldItems },
+    });
+    return readDigits(
+      [
+        `יש לך גם הזמנות קודמות שטרם שולמו בסך ${oldTotal} שקלים, בנוסף למה שהזמנת עכשיו בסך ${newTotal} שקלים`,
+        'לתשלום הכל כולל החוב הקודם הקש 1',
+        'לתשלום רק מה שהזמנת עכשיו והשארת החוב הקודם לפעם הבאה הקש 2',
+      ],
+      'PAY_SCOPE',
+      { max: 1 }
+    );
+  }
 
+  return proceedToCredit(sess, [...newItems, ...oldItems]);
+}
+
+// שלב שני - אם יש ללקוח יתרת זכות, שואלים אם לקזז אותה עכשיו או
+// להשאיר אותה לפעם הבאה ולחייב הכל באשראי.
+function proceedToCredit(sess, chosenItems) {
+  const chosenTotal = sumItems(chosenItems);
+  const balance = credit.getBalance(sess.customer_id);
+
+  if (balance > 0) {
+    session.updateSession(sess.call_id, {
+      step: 'choose_credit',
+      data: { checkoutItems: chosenItems, checkoutTotal: chosenTotal },
+    });
+    return readDigits(
+      [
+        `יש לך יתרת זכות בסך ${balance} שקלים`,
+        'לקיזוז מהסכום עכשיו הקש 1',
+        `להשאיר את הזכות לפעם הבאה ולשלם ${chosenTotal} שקלים באשראי הקש 2`,
+      ],
+      'CREDIT_CHOICE',
+      { max: 1 }
+    );
+  }
+
+  return finalConfirm(sess, chosenItems, 0);
+}
+
+function finalConfirm(sess, chosenItems, creditToApply) {
+  const chosenTotal = sumItems(chosenItems);
+  const amountToCharge = chosenTotal - creditToApply;
   session.updateSession(sess.call_id, {
     step: 'confirm_summary',
-    data: { totalAmount: amountToCharge, originalTotal: total, creditToApply },
+    data: {
+      checkoutIds: chosenItems.map((r) => r.id),
+      totalAmount: amountToCharge,
+      originalTotal: chosenTotal,
+      creditToApply,
+    },
   });
-
-  const summaryLines = ['סיכום ההזמנה', ...lines, `סך הכל ${total} שקלים`];
+  const lines = chosenItems.map((r) => `${r.bed_count} מיטות במקום ${r.location_name} לחג ${r.holiday_name}`);
+  const summaryLines = ['סיכום ההזמנה', ...lines, `סך הכל ${chosenTotal} שקלים`];
   if (creditToApply > 0) {
     summaryLines.push(`מתוך זה ${creditToApply} שקלים יקוזזו מיתרת הזכות שלך`);
     summaryLines.push(amountToCharge > 0 ? `ויחויבו ${amountToCharge} שקלים באשראי` : 'לא יידרש חיוב באשראי כלל');
   }
   summaryLines.push('לאישור הקש 1 לביטול הקש 2');
 
-  return combine(readDigits(summaryLines, 'CONFIRM_YN', { max: 1 }));
+  return readDigits(summaryLines, 'CONFIRM_YN', { max: 1 });
 }
 
 async function handle(req, res) {
@@ -125,7 +192,7 @@ async function handle(req, res) {
 
       case 'holiday_menu': {
         if (p('HOLIDAY_NUM') === '9') {
-          return res.send(startSummary(sess));
+          return res.send(beginCheckout(sess));
         }
         const idx = parseInt(p('HOLIDAY_NUM'), 10) - 1;
         const seasonId = sess.data.holidayQueue[idx];
@@ -174,14 +241,16 @@ async function handle(req, res) {
         const locationId = sess.data.currentLocationId;
         const capacity = inventory.getCapacity(seasonId, locationId);
         if (p('CONFIRM_COUNT') === '1') {
-          inventory.upsertReservation({
+          const reservation = inventory.upsertReservation({
             customerId: sess.customer_id,
             holidaySeasonId: seasonId,
             locationId,
             bedCount: sess.data.pendingBedCount,
             pricePerBed: capacity.price_per_bed,
           });
-          session.updateSession(callId, { step: 'after_location' });
+          const newIds = new Set(sess.data.newReservationIds || []);
+          if (reservation) newIds.add(reservation.id);
+          session.updateSession(callId, { step: 'after_location', data: { newReservationIds: [...newIds] } });
           return res.send(readDigits('נרשם עוד מקום באותו חג הקש 1 לחג אחר או לסיום הקש 2', 'AFTER_LOC', { max: 1 }));
         }
         session.updateSession(callId, { step: 'ask_bed_count' });
@@ -198,11 +267,32 @@ async function handle(req, res) {
         return res.send(holidayMenuDirective(sess));
       }
 
+      case 'choose_pay_scope': {
+        const { checkoutNewItems, checkoutOldItems } = sess.data;
+        const chosenItems = p('PAY_SCOPE') === '2' ? checkoutNewItems : [...checkoutNewItems, ...checkoutOldItems];
+        return res.send(proceedToCredit(sess, chosenItems));
+      }
+
+      case 'choose_credit': {
+        const { checkoutItems, checkoutTotal } = sess.data;
+        const balance = credit.getBalance(sess.customer_id);
+        const creditToApply = p('CREDIT_CHOICE') === '1' ? Math.min(balance, checkoutTotal) : 0;
+        return res.send(finalConfirm(sess, checkoutItems, creditToApply));
+      }
+
       case 'confirm_summary': {
         if (p('CONFIRM_YN') === '1') {
-          const { totalAmount, creditToApply } = sess.data;
+          const { totalAmount, creditToApply, checkoutIds } = sess.data;
           if (totalAmount <= 0) {
-            finalizeReservationCharge({ customerId: sess.customer_id, callId, amountCharged: 0, creditApplied: creditToApply, success: true, method: 'credit_only' });
+            finalizeReservationCharge({
+              customerId: sess.customer_id,
+              callId,
+              amountCharged: 0,
+              creditApplied: creditToApply,
+              success: true,
+              method: 'credit_only',
+              reservationIds: checkoutIds,
+            });
             session.updateSession(callId, { step: 'done' });
             session.endSession(callId);
             return res.send(
@@ -223,7 +313,7 @@ async function handle(req, res) {
 
       case 'charging': {
         const success = p('CreditCard_CODE') === 'OK';
-        const { totalAmount, creditToApply } = sess.data;
+        const { totalAmount, creditToApply, checkoutIds } = sess.data;
         finalizeReservationCharge({
           customerId: sess.customer_id,
           callId,
@@ -233,6 +323,7 @@ async function handle(req, res) {
           confirmation: p('CreditCard_CODE'),
           method: 'phone',
           rawParams: params,
+          reservationIds: checkoutIds,
         });
 
         session.updateSession(callId, { step: 'done' });

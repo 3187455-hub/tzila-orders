@@ -6,7 +6,7 @@ const inventory = require('../ivr/inventory');
 const credit = require('./credit');
 const nedarim = require('./nedarim');
 
-function finalizeReservationCharge({ customerId, callId, amountCharged, creditApplied, success, confirmation, method, rawParams }) {
+function finalizeReservationCharge({ customerId, callId, amountCharged, creditApplied, success, confirmation, method, rawParams, reservationIds }) {
   const customer = customers.getById(customerId);
   const { raw, last4 } = nedarim.extractCreditCardInfo(rawParams);
   const chargeResult = db
@@ -34,8 +34,11 @@ function finalizeReservationCharge({ customerId, callId, amountCharged, creditAp
     if (creditApplied > 0) {
       credit.useCredit(customer.id, creditApplied, 'קיזוז בהזמנת מיטות', { paymentChargeId: chargeResult.lastInsertRowid });
     }
-    const pending = inventory.pendingReservationsForCustomer(customer.id);
-    inventory.markReservationsPaid(pending.map((r) => r.id), chargeResult.lastInsertRowid);
+    // reservationIds - כשהלקוח בחר לשלם רק חלק מהחוב שלו (למשל רק מה
+    // שהזמין עכשיו, והשאיר חוב קודם לפעם הבאה) מסמנים כשולם רק את מה
+    // שבאמת נכלל בסכום ששולם - לא באופן גורף את כל הממתין לתשלום.
+    const idsToMark = reservationIds || inventory.pendingReservationsForCustomer(customer.id).map((r) => r.id);
+    inventory.markReservationsPaid(idsToMark, chargeResult.lastInsertRowid);
     nedarim.syncTokenAcrossPhones(customers.allPhoneNumbers(customer)).catch((e) => console.error('token sync failed', e));
   }
   return chargeResult;
