@@ -43,7 +43,13 @@ async function syncTokenAcrossPhones(customerPhones) {
     console.warn('YEMOT_API_TOKEN / YEMOT_TOKENS_FILE_PATH לא מוגדרים - מדלג על סנכרון טוקן.');
     return;
   }
-  const text = await yemotFiles.downloadTextFile(config.yemot.tokensFilePath);
+  let text;
+  try {
+    text = await yemotFiles.downloadTextFile(config.yemot.tokensFilePath);
+  } catch (e) {
+    if (String(e.message).includes('404')) return; // הקובץ עוד לא נוצר - אין טוקנים קיימים, זה תקין
+    throw e;
+  }
   const lines = parseTokensFile(text);
   const mosad = config.nedarimPlus.terminalNumber;
 
@@ -98,4 +104,44 @@ function extractCreditCardInfo(params) {
   return { raw, last4 };
 }
 
-module.exports = { buildChargeDirective, syncTokenAcrossPhones, parseTokensFile, serializeTokensFile, extractCreditCardInfo };
+// ימות המשיח מחזיר רק הצלחה/כישלון בחיוב טלפוני, לא את פרטי הכרטיס -
+// שולפים את 4 הספרות האחרונות ישירות מדוח העסקאות של נדרים פלוס
+// (מפתח API נפרד, ApiPassword, שונה מ-ApiValid ששימש לחיוב עצמו)
+async function lookupLastNumFromHistory({ amount, withinMinutes = 5 }) {
+  if (!config.nedarimPlus.apiPassword) return null;
+  try {
+    const body = new URLSearchParams({
+      Action: 'GetHistoryJson',
+      MosadId: config.nedarimPlus.terminalNumber,
+      ApiPassword: config.nedarimPlus.apiPassword,
+      MaxId: '20',
+    });
+    const res = await fetch('https://matara.pro/nedarimplus/Reports/Manage3.aspx', { method: 'POST', body });
+    const rows = await res.json();
+    if (!Array.isArray(rows)) return null;
+
+    const now = Date.now();
+    const match = rows.find((r) => {
+      const amt = parseFloat(r.Amount);
+      if (Number.isNaN(amt) || Math.abs(amt - amount) > 0.01) return false;
+      const m = /(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})/.exec(r.TransactionTime || '');
+      if (!m) return true;
+      const [, dd, MM, yyyy, HH, mm, ss] = m;
+      const t = new Date(`${yyyy}-${MM}-${dd}T${HH}:${mm}:${ss}`).getTime();
+      return Math.abs(now - t) <= withinMinutes * 60 * 1000;
+    });
+    return match ? match.LastNum : null;
+  } catch (e) {
+    console.error('lookupLastNumFromHistory failed', e.message);
+    return null;
+  }
+}
+
+module.exports = {
+  buildChargeDirective,
+  syncTokenAcrossPhones,
+  parseTokensFile,
+  serializeTokensFile,
+  extractCreditCardInfo,
+  lookupLastNumFromHistory,
+};

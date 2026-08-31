@@ -21,7 +21,16 @@ function finalizeReservationCharge({ customerId, callId, amountCharged, creditAp
     );
 
   if (success) {
-    if (last4) db.prepare('UPDATE customers SET card_last4 = ? WHERE id = ?').run(last4, customer.id);
+    if (last4) {
+      db.prepare('UPDATE customers SET card_last4 = ? WHERE id = ?').run(last4, customer.id);
+    } else if (method === 'phone' && amountCharged > 0) {
+      nedarim
+        .lookupLastNumFromHistory({ amount: amountCharged })
+        .then((found) => {
+          if (found) db.prepare('UPDATE customers SET card_last4 = ? WHERE id = ?').run(found, customer.id);
+        })
+        .catch((e) => console.error('lookupLastNumFromHistory failed', e));
+    }
     if (creditApplied > 0) {
       credit.useCredit(customer.id, creditApplied, 'קיזוז בהזמנת מיטות', { paymentChargeId: chargeResult.lastInsertRowid });
     }

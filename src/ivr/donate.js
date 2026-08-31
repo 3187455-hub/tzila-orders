@@ -43,6 +43,12 @@ async function handle(req, res) {
         if (success) {
           const customer = customers.getById(sess.customer_id);
           nedarim.syncTokenAcrossPhones(customers.allPhoneNumbers(customer)).catch((e) => console.error('token sync failed', e));
+          nedarim
+            .lookupLastNumFromHistory({ amount: sess.data.amount })
+            .then((found) => {
+              if (found) db.prepare('UPDATE customers SET card_last4 = ? WHERE id = ?').run(found, customer.id);
+            })
+            .catch((e) => console.error('lookupLastNumFromHistory failed', e));
         }
         session.endSession(callId);
         return res.send(

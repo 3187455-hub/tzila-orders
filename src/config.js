@@ -13,6 +13,7 @@ module.exports = {
     terminalNumber: process.env.NEDARIM_PLUS_TERMINAL_NUMBER || '',
     apiValid: process.env.NEDARIM_PLUS_API_VALID || '',
     category: process.env.NEDARIM_PLUS_CATEGORY || '',
+    apiPassword: process.env.NEDARIM_PLUS_API_PASSWORD || '',
   },
 
   admin: {
