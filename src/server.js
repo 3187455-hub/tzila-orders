@@ -49,6 +49,9 @@ app.use('/ivr', (req, res, next) => {
   next();
 });
 
+// שלוחת אבחון זמנית - הודעה פשוטה באנגלית, בלי read, כדי לבודד תקלות
+app.get('/ivr/diag', (req, res) => res.send('id_list_message=t-Hello World testing one two three'));
+
 app.get('/ivr/register', verifyYemot, ivrRegister.handle);
 app.get('/ivr/status', verifyYemot, ivrStatus.handle);
 app.get('/ivr/donate', verifyYemot, ivrDonate.handle);
