@@ -6,16 +6,22 @@ const inventory = require('../ivr/inventory');
 const credit = require('./credit');
 const nedarim = require('./nedarim');
 
-function finalizeReservationCharge({ customerId, callId, amountCharged, creditApplied, success, confirmation, method }) {
+function finalizeReservationCharge({ customerId, callId, amountCharged, creditApplied, success, confirmation, method, rawParams }) {
   const customer = customers.getById(customerId);
+  const { raw, last4 } = nedarim.extractCreditCardInfo(rawParams);
   const chargeResult = db
     .prepare(
-      `INSERT INTO payment_charges (customer_id, call_id, total_amount, credit_applied, status, method, nedarim_confirmation)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO payment_charges (customer_id, call_id, total_amount, credit_applied, status, method, nedarim_confirmation, raw_response)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(customer.id, callId, amountCharged, success ? creditApplied : 0, success ? 'success' : 'failed', method, confirmation || null);
+    .run(
+      customer.id, callId, amountCharged, success ? creditApplied : 0, success ? 'success' : 'failed', method,
+      confirmation || null,
+      Object.keys(raw).length ? JSON.stringify(raw) : null
+    );
 
   if (success) {
+    if (last4) db.prepare('UPDATE customers SET card_last4 = ? WHERE id = ?').run(last4, customer.id);
     if (creditApplied > 0) {
       credit.useCredit(customer.id, creditApplied, 'קיזוז בהזמנת מיטות', { paymentChargeId: chargeResult.lastInsertRowid });
     }

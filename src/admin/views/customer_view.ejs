@@ -32,6 +32,7 @@
     <div class="vfield"><div class="k">פלאפון נוסף</div><div class="v"><%= customer.extra_mobile || '-' %></div></div>
     <div class="vfield"><div class="k">נרשם בתאריך</div><div class="v"><%= customer.created_at %></div></div>
     <div class="vfield" style="background:<%= balance > 0 ? '#e8f8ee' : '#f8f9fb' %>;"><div class="k">יתרת זכות</div><div class="v"><%= balance %> ש"ח</div></div>
+    <div class="vfield"><div class="k">4 ספרות אחרונות בכרטיס</div><div class="v"><%= customer.card_last4 || '-' %></div></div>
   </div>
 </div>
 

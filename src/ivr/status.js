@@ -155,6 +155,7 @@ async function handle(req, res) {
           success,
           confirmation: p('CreditCard_CODE'),
           method: 'phone',
+          rawParams: params,
         });
         session.endSession(callId);
         let msg;

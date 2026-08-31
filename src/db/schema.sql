@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS customers (
   wife_mobile TEXT,
   extra_mobile TEXT,
   name_recording_path TEXT,
+  card_last4 TEXT,
   needs_details INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -71,6 +72,7 @@ CREATE TABLE IF NOT EXISTS payment_charges (
   status TEXT NOT NULL DEFAULT 'pending', -- pending | success | failed
   method TEXT NOT NULL DEFAULT 'phone', -- phone | manual_cash | manual_check | credit_only
   nedarim_confirmation TEXT,
+  raw_response TEXT, -- כל הפרמטרים שחזרו מימות המשיח על תוצאת החיוב (JSON) - לצורך ביקורת/דיבוג
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

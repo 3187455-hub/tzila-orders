@@ -72,4 +72,30 @@ async function syncTokenAcrossPhones(customerPhones) {
   }
 }
 
-module.exports = { buildChargeDirective, syncTokenAcrossPhones, parseTokensFile, serializeTokensFile };
+// אוסף את כל הפרמטרים CreditCard_* שימות המשיח מחזיר בתום חיוב, ומנסה
+// לזהות מתוכם את 4 הספרות האחרונות של הכרטיס (שם השדה המדויק לא היה
+// מתועד - נבדוק כמה אפשרויות נפוצות; אפשר להוסיף עוד אם תגלה את השם הנכון)
+function extractCreditCardInfo(params) {
+  const raw = {};
+  for (const key of Object.keys(params || {})) {
+    if (key.startsWith('CreditCard_')) {
+      const v = params[key];
+      raw[key] = Array.isArray(v) ? v[v.length - 1] : v;
+    }
+  }
+  const last4Candidates = [
+    'CreditCard_4Digits', 'CreditCard_Last4', 'CreditCard_LastNum',
+    'CreditCard_CardNum', 'CreditCard_Digits', 'CreditCard_Card',
+  ];
+  let last4 = null;
+  for (const c of last4Candidates) {
+    const v = raw[c];
+    if (v && /\d{4}$/.test(String(v))) {
+      last4 = String(v).slice(-4);
+      break;
+    }
+  }
+  return { raw, last4 };
+}
+
+module.exports = { buildChargeDirective, syncTokenAcrossPhones, parseTokensFile, serializeTokensFile, extractCreditCardInfo };

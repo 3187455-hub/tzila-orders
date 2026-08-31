@@ -26,8 +26,8 @@
 <div class="card">
   <h2>חיובים</h2>
   <table>
-    <tr><th>חויב באשראי</th><th>קוזז מזכות</th><th>סטטוס</th><th>אמצעי</th><th>אסמכתא</th><th>תאריך</th></tr>
-    <% if (charges.length === 0) { %><tr><td colspan="6">אין חיובים</td></tr><% } %>
+    <tr><th>חויב באשראי</th><th>קוזז מזכות</th><th>סטטוס</th><th>אמצעי</th><th>אסמכתא</th><th>תאריך</th><th>פרטים גולמיים מימות המשיח</th></tr>
+    <% if (charges.length === 0) { %><tr><td colspan="7">אין חיובים</td></tr><% } %>
     <% charges.forEach(function(c) { %>
     <tr>
       <td><%= c.total_amount %></td>
@@ -36,6 +36,7 @@
       <td><%= c.method %></td>
       <td><%= c.nedarim_confirmation || '-' %></td>
       <td><%= c.created_at %></td>
+      <td style="font-size:11px; max-width:260px; word-break:break-all;"><%= c.raw_response || '-' %></td>
     </tr>
     <% }) %>
   </table>

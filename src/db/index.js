@@ -37,4 +37,12 @@ if (!columnExists('payment_charges', 'credit_applied')) {
   db.exec('ALTER TABLE payment_charges ADD COLUMN credit_applied REAL NOT NULL DEFAULT 0');
 }
 
+if (!columnExists('payment_charges', 'raw_response')) {
+  db.exec('ALTER TABLE payment_charges ADD COLUMN raw_response TEXT');
+}
+
+if (!columnExists('customers', 'card_last4')) {
+  db.exec('ALTER TABLE customers ADD COLUMN card_last4 TEXT');
+}
+
 module.exports = db;

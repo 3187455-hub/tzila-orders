@@ -14,7 +14,7 @@
 
 <table>
   <tr>
-    <th>קוד</th><th>שם</th><th>משפחה</th><th>עיר</th><th>טלפון</th><th>פלאפון בעל</th><th>פלאפון אישה</th><th>פלאפון נוסף</th><th>מ.ז</th><th></th>
+    <th>קוד</th><th>שם</th><th>משפחה</th><th>עיר</th><th>טלפון</th><th>פלאפון בעל</th><th>פלאפון אישה</th><th>פלאפון נוסף</th><th>מ.ז</th><th>4 ספרות כרטיס</th><th></th>
   </tr>
   <% customers.forEach(function(c) { %>
   <tr>
@@ -27,6 +27,7 @@
     <td><%= c.wife_mobile || '' %></td>
     <td><%= c.extra_mobile || '' %></td>
     <td><%= c.id_number || '' %></td>
+    <td><%= c.card_last4 || '' %></td>
     <td>
       <a href="/admin/customers/<%= c.id %>">צפייה</a> |
       <a href="/admin/customers/<%= c.id %>/edit">עריכה</a> |

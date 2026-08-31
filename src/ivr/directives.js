@@ -45,7 +45,7 @@ function combine(...directives) {
 function chargeCreditCard({ amount, terminalNumber, apiValid, createToken = true, category }) {
   const parts = [`credit_card=nedarim_plus,${amount},${terminalNumber},1,1`, `nedarim_plus_ApiValid=${apiValid}`];
   if (createToken) parts.push('credit_card_create_token=yes');
-  if (category) parts.push(`credit_card_category_nedarim_plus=${encodeURIComponent(category)}`);
+  if (category) parts.push(`credit_card_category_nedarim_plus=${category}`);
   return parts.join('&');
 }
 

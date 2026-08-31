@@ -223,8 +223,6 @@ async function handle(req, res) {
       }
 
       case 'charging': {
-        // תוצאת החיוב - שמות הפרמטרים המדויקים טרם אומתו מול חשבון אמיתי,
-        // יש להתאים כאן לפי מה שיתקבל בפועל בשיחת בדיקה.
         const success = p('CreditCard_CODE') === 'OK';
         const { totalAmount, creditToApply } = sess.data;
         finalizeReservationCharge({
@@ -235,6 +233,7 @@ async function handle(req, res) {
           success,
           confirmation: p('CreditCard_CODE'),
           method: 'phone',
+          rawParams: params,
         });
 
         session.updateSession(callId, { step: 'done' });
