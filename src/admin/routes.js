@@ -290,23 +290,29 @@ router.post('/seasons/:id', (req, res) => {
 });
 
 // ---------- לקוחות ----------
+const CUSTOMER_SEARCH_FIELDS = [
+  'code', 'first_name', 'father_name', 'last_name', 'address', 'house_number',
+  'city', 'neighborhood', 'id_number', 'phone', 'husband_mobile', 'wife_mobile', 'extra_mobile',
+];
+const CUSTOMER_SORT = 'ORDER BY last_name, first_name';
+
 router.get('/customers', (req, res) => {
   let customers;
   if (req.query.needs_details === '1') {
-    customers = db.prepare('SELECT * FROM customers WHERE needs_details = 1 ORDER BY id DESC').all();
+    customers = db.prepare(`SELECT * FROM customers WHERE needs_details = 1 ${CUSTOMER_SORT}`).all();
   } else if (req.query.q) {
-    const q = `%${req.query.q}%`;
-    customers = db
-      .prepare(
-        `SELECT * FROM customers WHERE
-           code LIKE ? OR first_name LIKE ? OR father_name LIKE ? OR last_name LIKE ?
-           OR address LIKE ? OR house_number LIKE ? OR city LIKE ? OR neighborhood LIKE ? OR id_number LIKE ?
-           OR phone LIKE ? OR husband_mobile LIKE ? OR wife_mobile LIKE ? OR extra_mobile LIKE ?
-         ORDER BY id DESC`
-      )
-      .all(q, q, q, q, q, q, q, q, q, q, q, q, q);
+    // כל מילה בחיפוש (מופרדת ברווח) צריכה להימצא באיזשהו שדה - אפשר
+    // גם במילים חלקיות ("שמ ווי" ימצא "שמעון ... ווייס"), וכל מילה
+    // יכולה להתאים לשדה אחר (שם פרטי מול משפחה)
+    const words = req.query.q.trim().split(/\s+/).filter(Boolean);
+    const whereClause = words.map(() => `(${CUSTOMER_SEARCH_FIELDS.map((f) => `${f} LIKE ?`).join(' OR ')})`).join(' AND ');
+    const params = [];
+    for (const w of words) {
+      for (let i = 0; i < CUSTOMER_SEARCH_FIELDS.length; i++) params.push(`%${w}%`);
+    }
+    customers = db.prepare(`SELECT * FROM customers WHERE ${whereClause} ${CUSTOMER_SORT}`).all(...params);
   } else {
-    customers = db.prepare('SELECT * FROM customers ORDER BY id DESC LIMIT 200').all();
+    customers = db.prepare(`SELECT * FROM customers ${CUSTOMER_SORT} LIMIT 200`).all();
   }
   res.render('customers', { customers, q: req.query.q, flash: req.query.flash });
 });

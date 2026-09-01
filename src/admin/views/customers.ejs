@@ -15,12 +15,13 @@
 
 <table>
   <tr>
-    <th>קוד</th><th>שם</th><th>משפחה</th><th>עיר</th><th>טלפון</th><th>פלאפון בעל</th><th>פלאפון אישה</th><th>פלאפון נוסף</th><th>מ.ז</th><th>4 ספרות כרטיס</th><th></th>
+    <th>קוד</th><th>שם</th><th>בן</th><th>משפחה</th><th>עיר</th><th>טלפון</th><th>פלאפון בעל</th><th>פלאפון אישה</th><th>פלאפון נוסף</th><th>מ.ז</th><th>4 ספרות כרטיס</th><th></th>
   </tr>
   <% customers.forEach(function(c) { %>
   <tr>
     <td><%= c.code || c.id %></td>
     <td><a href="/admin/customers/<%= c.id %>"><%= c.first_name || '' %></a> <% if (c.needs_details) { %><span class="badge-pending">(להשלמת פרטים)</span><% } %> <% if (c.blocked) { %><span class="badge-pending" style="background:#f8d7da; color:#842029;">(חסום)</span><% } %></td>
+    <td><%= c.father_name || '' %></td>
     <td><%= c.last_name || '' %></td>
     <td><%= c.city || '' %></td>
     <td><%= c.phone || '' %></td>
