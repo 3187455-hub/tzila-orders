@@ -168,7 +168,7 @@ async function handle(req, res) {
         const idx = parseInt(p('EDIT_NUM'), 10) - 1;
         const reservationId = (sess.data.editList || [])[idx];
         if (!reservationId) {
-          return res.send(combine(sayText('בחירה לא תקינה'), buildEditListDirective(callId, sess.customer_id)));
+          return res.send(combine(sayText('המספר שהקשת אינו תואם אף אחת מהאפשרויות'), buildEditListDirective(callId, sess.customer_id)));
         }
         const reservation = db.prepare('SELECT * FROM reservations WHERE id = ?').get(reservationId);
         // בשלוחת בירור ותשלום מותר רק להקטין או לבטל הזמנה קיימת, לא
@@ -190,7 +190,7 @@ async function handle(req, res) {
         if (Number.isNaN(newCount) || newCount > sess.data.maxAllowed) {
           return res.send(
             combine(
-              sayText('כמות לא תקינה'),
+              sayText('הכמות שהקשת אינה במסגרת התקינה'),
               readDigits(
                 [`הקלד כמות מיטות עד ${sess.data.maxAllowed}, או 0 למחיקה`, 'ולסיום הקש סולמית'],
                 'NEW_COUNT',
@@ -210,7 +210,7 @@ async function handle(req, res) {
             pricePerBed: reservation.price_per_bed_snapshot,
           });
         }
-        return res.send(combine(sayText('עודכן בהצלחה'), buildMenuDirective(callId, sess.customer_id)));
+        return res.send(combine(sayText('ההזמנה שלך עודכנה בהצלחה'), buildMenuDirective(callId, sess.customer_id)));
       }
 
       case 'charging': {

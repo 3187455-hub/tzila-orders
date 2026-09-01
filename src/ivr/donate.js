@@ -24,7 +24,7 @@ async function handle(req, res) {
       case 'ask_amount': {
         const amount = parseInt(p('AMOUNT'), 10);
         if (!amount || amount <= 0) {
-          return res.send(combine(sayText('סכום לא תקין'), readDigits('כמה ברצונך לתרום בשקלים', 'AMOUNT', { max: 5 })));
+          return res.send(combine(sayText('הסכום שהקשת אינו תקין'), readDigits('כמה ברצונך לתרום בשקלים', 'AMOUNT', { max: 5 })));
         }
         const result = db
           .prepare('INSERT INTO donations (customer_id, amount, status, call_id) VALUES (?, ?, ?, ?)')

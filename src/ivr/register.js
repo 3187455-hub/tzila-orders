@@ -55,12 +55,12 @@ function locationListDirective(seasonId, sess) {
     data: { currentLocations: locations.map((l) => l.location_id) },
   });
   const total = locations.reduce((sum, l) => sum + l.available_beds, 0);
-  // הניסוח שונה בכוונה (לא רק תיקון קוסמטי) - חשד לעיוות קול מתקבע
-  // אצל ימות המשיח על נוסח קודם שנשמע פגום מהמילה הראשונה ובאופן קבוע
-  // (התחיל אחרי השמעה חלקית פעם אחת, ומאז עקבי) - מתאים לתבנית של
-  // הקלטת TTS פגומה שנשמרה במטמון. שינוי הניסוח מכריח יצירת הקלטה חדשה.
+  // ניסיון קודם (שינוי ניסוח בלבד) לא פתר עיוות קול שדווח - מסתמן
+  // שזה קורה דווקא במשפטים קצרים ("בחירה לא תקינה" קצר גם נשמע מעוות,
+  // בעוד שהשורות הארוכות יותר לכל מקום נשמעות תקין). הפתרון הנוכחי:
+  // להאריך את המשפטים הקצרים במקום רק לשנות ניסוח.
   const parts = locations.map((l, i) => `במקום ${l.location_name} יש ${l.available_beds} מיטות פנויות, לבחירה הקש ${i + 1}`);
-  const lines = [`יש כרגע ${total} מיטות פנויות בסך הכל`, ...parts];
+  const lines = [`ברוך השם יש כרגע במערכת סך הכל ${total} מיטות פנויות לבחירה בין כל המקומות`, ...parts];
   return { directive: readDigits(lines, 'LOC_NUM', { max: 1 }), empty: false };
 }
 
@@ -219,7 +219,7 @@ async function handle(req, res) {
         const idx = parseInt(p('HOLIDAY_NUM'), 10) - 1;
         const seasonId = sess.data.holidayQueue[idx];
         if (!seasonId) {
-          return res.send(combine(sayText('בחירה לא תקינה'), holidayMenuDirective(sess)));
+          return res.send(combine(sayText('המספר שהקשת אינו תואם אף אחת מהאפשרויות'), holidayMenuDirective(sess)));
         }
         session.updateSession(callId, { data: { currentSeasonId: seasonId } });
         const { directive, empty } = locationListDirective(seasonId, session.getSession(callId));
@@ -237,7 +237,7 @@ async function handle(req, res) {
         if (!capacity || capacity.available_beds <= 0) {
           const { directive, empty } = locationListDirective(seasonId, sess);
           if (empty) return res.send(combine(sayText('אין מקומות פנויים כרגע'), holidayMenuDirective(sess)));
-          return res.send(combine(sayText('בחירה לא תקינה נסה שוב'), directive));
+          return res.send(combine(sayText('המספר שהקשת אינו תואם אף אחד מהמקומות ברשימה'), directive));
         }
         session.updateSession(callId, {
           step: 'ask_bed_count',
@@ -252,7 +252,7 @@ async function handle(req, res) {
         const bedCount = parseInt(p('BED_COUNT'), 10);
         const capacity = inventory.getCapacity(seasonId, locationId);
         if (!bedCount || bedCount <= 0 || bedCount > capacity.available_beds) {
-          return res.send(combine(sayText('כמות לא תקינה'), askBedCountDirective(capacity.available_beds)));
+          return res.send(combine(sayText('הכמות שהקשת אינה במסגרת התקינה'), askBedCountDirective(capacity.available_beds)));
         }
         session.updateSession(callId, { step: 'confirm_count', data: { pendingBedCount: bedCount } });
         return res.send(readDigits(`בחרת ${bedCount} מיטות לאישור הקש 1 לתיקון הקש 2`, 'CONFIRM_COUNT', { max: 1 }));
