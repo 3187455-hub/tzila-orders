@@ -180,7 +180,14 @@ async function handle(req, res) {
           return res.send(firstHolidayMenuDirective(session.getSession(callId)));
         }
         session.updateSession(callId, { step: 'record_name' });
-        return res.send(combine(recordMessage('לא זיהינו את מספרך אנא אמור עכשיו את שמך המלא', 'NAME_REC')));
+        return res.send(
+          combine(
+            recordMessage(
+              ['לא זיהינו את מספרך', 'אנא הקלט את שמך המלא ולאחריו הקש סולמית'],
+              'NAME_REC'
+            )
+          )
+        );
       }
 
       case 'record_name': {

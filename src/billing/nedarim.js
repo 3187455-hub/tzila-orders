@@ -108,7 +108,10 @@ function extractCreditCardInfo(params) {
 // שולפים את 4 הספרות האחרונות ישירות מדוח העסקאות של נדרים פלוס
 // (מפתח API נפרד, ApiPassword, שונה מ-ApiValid ששימש לחיוב עצמו)
 async function lookupLastNumFromHistory({ amount, withinMinutes = 5 }) {
-  if (!config.nedarimPlus.apiPassword) return null;
+  if (!config.nedarimPlus.apiPassword) {
+    console.warn('lookupLastNumFromHistory: NEDARIM_PLUS_API_PASSWORD לא מוגדר - מדלג');
+    return null;
+  }
   try {
     const body = new URLSearchParams({
       Action: 'GetHistoryJson',
@@ -117,8 +120,19 @@ async function lookupLastNumFromHistory({ amount, withinMinutes = 5 }) {
       MaxId: '20',
     });
     const res = await fetch('https://matara.pro/nedarimplus/Reports/Manage3.aspx', { method: 'POST', body });
-    const rows = await res.json();
-    if (!Array.isArray(rows)) return null;
+    const text = await res.text();
+    let rows;
+    try {
+      rows = JSON.parse(text);
+    } catch (parseErr) {
+      console.error(`lookupLastNumFromHistory: תגובה לא-JSON (HTTP ${res.status}): ${text.slice(0, 300)}`);
+      return null;
+    }
+    if (!Array.isArray(rows)) {
+      console.error(`lookupLastNumFromHistory: תגובה לא מערך (HTTP ${res.status}): ${JSON.stringify(rows).slice(0, 300)}`);
+      return null;
+    }
+    console.log(`lookupLastNumFromHistory: התקבלו ${rows.length} שורות, מחפש סכום ${amount} בטווח ${withinMinutes} דקות`);
 
     const now = Date.now();
     const match = rows.find((r) => {
@@ -130,6 +144,11 @@ async function lookupLastNumFromHistory({ amount, withinMinutes = 5 }) {
       const t = new Date(`${yyyy}-${MM}-${dd}T${HH}:${mm}:${ss}`).getTime();
       return Math.abs(now - t) <= withinMinutes * 60 * 1000;
     });
+    if (!match) {
+      console.warn(`lookupLastNumFromHistory: לא נמצאה שורה מתאימה. סכומים שהתקבלו: ${rows.map((r) => r.Amount).slice(0, 10).join(', ')}`);
+    } else {
+      console.log(`lookupLastNumFromHistory: נמצאה התאמה, LastNum=${match.LastNum}`);
+    }
     return match ? match.LastNum : null;
   } catch (e) {
     console.error('lookupLastNumFromHistory failed', e.message);
