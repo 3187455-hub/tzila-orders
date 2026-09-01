@@ -6,6 +6,7 @@ const config = require('./config');
 const ivrRegister = require('./ivr/register');
 const ivrStatus = require('./ivr/status');
 const ivrDonate = require('./ivr/donate');
+const ivrMessage = require('./ivr/message');
 const ivrHangup = require('./ivr/hangup');
 const adminRoutes = require('./admin/routes');
 const { ensureSeeded } = require('./db/seed');
@@ -61,6 +62,7 @@ app.get('/ivr/diag', (req, res) => {
 app.get('/ivr/register', verifyYemot, ivrRegister.handle);
 app.get('/ivr/status', verifyYemot, ivrStatus.handle);
 app.get('/ivr/donate', verifyYemot, ivrDonate.handle);
+app.get('/ivr/message', verifyYemot, ivrMessage.handle);
 // api_hangup_link לא בהכרח מקבל את אותם פרמטרים סטטיים (api_add) של
 // שלוחת ה-API הראשית, ופעולת הניקוי כאן לא רגישה - לכן בלי בדיקת סוד
 app.get('/ivr/hangup', ivrHangup.handle);

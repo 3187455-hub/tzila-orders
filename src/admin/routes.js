@@ -118,6 +118,29 @@ router.post('/settings', (req, res) => {
   res.redirect('/admin/settings?flash=' + encodeURIComponent('נשמר בהצלחה'));
 });
 
+// ---------- הודעות שהושארו בשלוחת "השארת הודעה" ----------
+router.get('/messages', (req, res) => {
+  const messages = db.prepare('SELECT * FROM messages ORDER BY id DESC').all();
+  res.render('messages', { messages, flash: req.query.flash });
+});
+
+router.get('/messages/:id/recording', async (req, res) => {
+  const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(req.params.id);
+  if (!message || !message.recording_path) return res.status(404).send('אין הקלטה');
+  try {
+    const buf = await yemotFiles.downloadBinaryFile(message.recording_path);
+    res.set('Content-Type', 'audio/wav');
+    res.send(buf);
+  } catch (e) {
+    res.status(502).send('שגיאה בהבאת ההקלטה מימות המשיח: ' + e.message);
+  }
+});
+
+router.post('/messages/:id/delete', (req, res) => {
+  db.prepare('DELETE FROM messages WHERE id = ?').run(req.params.id);
+  res.redirect('/admin/messages');
+});
+
 // ---------- מקומות ----------
 router.get('/locations', (req, res) => {
   const locations = db.prepare('SELECT * FROM locations ORDER BY sort_order, name').all();

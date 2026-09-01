@@ -16,12 +16,23 @@ module.exports = {
     apiPassword: process.env.NEDARIM_PLUS_API_PASSWORD || '',
   },
 
+  mail: {
+    host: process.env.SMTP_HOST || '',
+    port: parseInt(process.env.SMTP_PORT, 10) || 587,
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASS || '',
+    from: process.env.SMTP_FROM || process.env.SMTP_USER || '',
+    messageNotifyTo: process.env.MESSAGE_EMAIL_TO || '',
+  },
+
   admin: {
     username: process.env.ADMIN_USERNAME || 'admin',
     password: process.env.ADMIN_PASSWORD || '',
   },
 
   sessionSecret: process.env.SESSION_SECRET || 'insecure-dev-secret',
+
+  appBaseUrl: process.env.APP_BASE_URL || 'https://tzila-orders.onrender.com',
 
   defaultBedPrice: 50,
 };

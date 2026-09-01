@@ -1,0 +1,30 @@
+<%- include('partials/header', { title: 'הודעות' }) %>
+
+<h1>הודעות שהושארו</h1>
+<% if (flash) { %><div class="flash"><%= flash %></div><% } %>
+
+<table>
+  <tr>
+    <th>טלפון</th><th>תאריך</th><th>הקלטה</th><th>נשלח מייל</th><th></th>
+  </tr>
+  <% if (messages.length === 0) { %><tr><td colspan="5">אין הודעות</td></tr><% } %>
+  <% messages.forEach(function(m) { %>
+  <tr>
+    <td><%= m.phone || '-' %></td>
+    <td><%= m.created_at %></td>
+    <td>
+      <% if (m.recording_path) { %>
+      <audio controls src="/admin/messages/<%= m.id %>/recording" style="height:32px;"></audio>
+      <% } else { %>אין הקלטה<% } %>
+    </td>
+    <td><%= m.email_sent ? 'כן' : 'לא' %></td>
+    <td>
+      <form method="post" action="/admin/messages/<%= m.id %>/delete" class="inline" onsubmit="return confirm('למחוק את ההודעה?')">
+        <button type="submit" class="danger">מחק</button>
+      </form>
+    </td>
+  </tr>
+  <% }) %>
+</table>
+
+<%- include('partials/footer') %>
