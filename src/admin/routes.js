@@ -468,13 +468,42 @@ router.post('/customers/:id', (req, res) => {
 });
 
 router.post('/customers/:id/delete', requireManager, (req, res) => {
-  try {
-    db.prepare('DELETE FROM customers WHERE id = ?').run(req.params.id);
-  } catch (e) {
+  const customerId = req.params.id;
+  // חוסמים מחיקה רק אם יש היסטוריה "אמיתית" - הזמנה שלא בוטלה, תשלום
+  // או תרומה שהצליחו, או יתרת זכות שאינה אפס. היסטוריה "לא משמעותית"
+  // (הזמנות שבוטלו, חיובים שנכשלו, שיחות) נמחקת יחד עם הלקוח.
+  const hasRealReservation = db
+    .prepare(`SELECT 1 FROM reservations WHERE customer_id = ? AND status != 'cancelled' LIMIT 1`)
+    .get(customerId);
+  const hasSuccessfulCharge = db
+    .prepare(`SELECT 1 FROM payment_charges WHERE customer_id = ? AND status = 'success' LIMIT 1`)
+    .get(customerId);
+  const hasSuccessfulDonation = db
+    .prepare(`SELECT 1 FROM donations WHERE customer_id = ? AND status = 'success' LIMIT 1`)
+    .get(customerId);
+  const balance = credit.getBalance(customerId);
+
+  if (hasRealReservation || hasSuccessfulCharge || hasSuccessfulDonation || balance !== 0) {
     return res.redirect(
-      `/admin/customers/${req.params.id}?flash=` +
-        encodeURIComponent('לא ניתן למחוק לקוח שיש לו היסטוריה (הזמנות/חיובים/תרומות/יתרת זכות) במערכת')
+      `/admin/customers/${customerId}?flash=` +
+        encodeURIComponent('לא ניתן למחוק לקוח שיש לו הזמנה בפועל, תשלום/תרומה שהצליחו, או יתרת זכות שאינה אפס')
     );
+  }
+
+  try {
+    db.exec('BEGIN');
+    db.prepare('DELETE FROM reservations WHERE customer_id = ?').run(customerId);
+    db.prepare('DELETE FROM payment_charges WHERE customer_id = ?').run(customerId);
+    db.prepare('DELETE FROM donations WHERE customer_id = ?').run(customerId);
+    db.prepare('DELETE FROM credit_ledger WHERE customer_id = ?').run(customerId);
+    db.prepare('DELETE FROM call_sessions WHERE customer_id = ?').run(customerId);
+    db.prepare('DELETE FROM call_logs WHERE customer_id = ?').run(customerId);
+    db.prepare('DELETE FROM customers WHERE id = ?').run(customerId);
+    db.exec('COMMIT');
+  } catch (e) {
+    db.exec('ROLLBACK');
+    console.error('customer delete error', e);
+    return res.redirect(`/admin/customers/${customerId}?flash=` + encodeURIComponent('שגיאה במחיקה: ' + e.message));
   }
   res.redirect('/admin/customers');
 });
