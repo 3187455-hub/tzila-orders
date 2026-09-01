@@ -1,0 +1,18 @@
+<%- include('partials/header', { title: 'הגדרות כלליות' }) %>
+
+<h1>הגדרות כלליות</h1>
+<% if (flash) { %><div class="flash"><%= flash %></div><% } %>
+
+<div class="card">
+  <h3>הודעת פתיחה בשלוחת ההרשמה</h3>
+  <p style="color:#777; font-size:13px;">
+    ההודעה הזו תושמע פעם אחת בתחילת השיחה בשלוחת ההרשמה (שלוחה 1), לפני תפריט בחירת החג - ולא תחזור על עצמה כשחוזרים לבחור עוד מקום או עוד חג באותה שיחה.
+    השאר ריק כדי לא להשמיע שום דבר.
+  </p>
+  <form method="post" action="/admin/settings">
+    <textarea name="register_welcome_message" rows="4" style="width:100%; max-width:600px;"><%= registerWelcomeMessage %></textarea>
+    <p><button type="submit">שמור</button></p>
+  </form>
+</div>
+
+<%- include('partials/footer') %>

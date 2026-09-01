@@ -134,7 +134,22 @@ async function lookupLastNumFromHistory({ amount, withinMinutes = 5 }) {
     }
     console.log(`lookupLastNumFromHistory: התקבלו ${rows.length} שורות, מחפש סכום ${amount} בטווח ${withinMinutes} דקות`);
 
-    const now = Date.now();
+    // TransactionTime מגיע משעון ישראל (בלי ציון אזור זמן), בעוד ששרת
+    // רנדר רץ ב-UTC - פירוש נאיבי של המחרוזת כ"עכשיו" יוצר פער של
+    // שעתיים-שלוש (בדיוק ההפרש בין ישראל ל-UTC), שגורם לפספוס כל
+    // התאמה גם כשהסכום נכון. הפתרון: מחשבים גם את "עכשיו" כמחרוזת
+    // בשעון ישראל ומפרשים את שתיהן באותה שיטה נאיבית - כך שהפרש אזור
+    // הזמן מתבטל משני הצדדים בחיסור.
+    const nowIsrael = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Jerusalem',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+    }).formatToParts(new Date());
+    const partVal = (type) => nowIsrael.find((p) => p.type === type).value;
+    const now = new Date(
+      `${partVal('year')}-${partVal('month')}-${partVal('day')}T${partVal('hour')}:${partVal('minute')}:${partVal('second')}`
+    ).getTime();
+
     const match = rows.find((r) => {
       const amt = parseFloat(r.Amount);
       if (Number.isNaN(amt) || Math.abs(amt - amount) > 0.01) return false;

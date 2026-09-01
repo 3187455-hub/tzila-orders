@@ -9,6 +9,7 @@ const inventory = require('../ivr/inventory');
 const callLog = require('../ivr/callLog');
 const credit = require('../billing/credit');
 const { applyAvailableCreditToPending } = require('../billing/finalize');
+const settings = require('../settings');
 
 const router = express.Router();
 
@@ -102,6 +103,19 @@ router.post('/users/:id/delete', requireManager, (req, res) => {
   }
   db.prepare('DELETE FROM admin_users WHERE id = ?').run(req.params.id);
   res.redirect('/admin/users');
+});
+
+// ---------- הגדרות כלליות ----------
+router.get('/settings', (req, res) => {
+  res.render('settings', {
+    flash: req.query.flash,
+    registerWelcomeMessage: settings.get('register_welcome_message', ''),
+  });
+});
+
+router.post('/settings', (req, res) => {
+  settings.set('register_welcome_message', (req.body.register_welcome_message || '').trim());
+  res.redirect('/admin/settings?flash=' + encodeURIComponent('נשמר בהצלחה'));
 });
 
 // ---------- מקומות ----------

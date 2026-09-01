@@ -113,6 +113,11 @@ CREATE TABLE IF NOT EXISTS admin_users (
   role TEXT NOT NULL DEFAULT 'manager' -- manager | user
 );
 
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
+
 CREATE TABLE IF NOT EXISTS call_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   call_id TEXT NOT NULL,
