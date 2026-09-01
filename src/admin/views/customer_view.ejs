@@ -74,13 +74,25 @@
   <p style="color:#777;">אין הזמנות פעילות</p>
   <% } else { %>
   <table>
-    <tr><th>חג</th><th>מקום</th><th>מיטות</th><th>סטטוס</th><th>העברה ללקוח אחר (לפי קוד)</th></tr>
+    <tr><th>חג</th><th>מקום</th><th>מיטות</th><th>סטטוס</th><th>עדכון מקום</th><th>העברה ללקוח אחר (לפי קוד)</th></tr>
     <% activeReservations.forEach(function(r) { %>
     <tr>
       <td><%= r.holiday_name %> <%= r.year_label %></td>
       <td><%= r.location_name %></td>
       <td><%= r.bed_count %></td>
       <td class="<%= r.status === 'paid' ? 'badge-paid' : 'badge-pending' %>"><%= r.status === 'paid' ? 'שולם' : 'ממתין לתשלום' %></td>
+      <td>
+        <form method="post" action="/admin/reservations/<%= r.id %>/location" class="inline">
+          <select name="location_id">
+            <% (locationsBySeason[r.holiday_season_id] || []).forEach(function(loc) { %>
+            <option value="<%= loc.location_id %>" <%= loc.location_id === r.location_id ? 'selected' : '' %>>
+              <%= loc.location_name %> (פנויות: <%= loc.available_beds %>)
+            </option>
+            <% }) %>
+          </select>
+          <button type="submit">עדכן מקום</button>
+        </form>
+      </td>
       <td>
         <form method="post" action="/admin/reservations/<%= r.id %>/transfer" class="inline" onsubmit="return confirm('להעביר הזמנה זו ללקוח אחר?')">
           <input type="text" name="target_code" placeholder="קוד לקוח יעד" required style="width:100px">

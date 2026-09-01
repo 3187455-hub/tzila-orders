@@ -490,7 +490,13 @@ router.get('/customers/:id', (req, res) => {
        ORDER BY hs.id DESC, l.sort_order`
     )
     .all(customer.id);
-  res.render('customer_view', { customer, balance, bookableOptions, activeReservations, flash: req.query.flash });
+  const locationsBySeason = {};
+  for (const seasonId of new Set(activeReservations.map((r) => r.holiday_season_id))) {
+    locationsBySeason[seasonId] = inventory.locationsForSeason(seasonId);
+  }
+  res.render('customer_view', {
+    customer, balance, bookableOptions, activeReservations, locationsBySeason, flash: req.query.flash,
+  });
 });
 
 router.get('/customers/:id/edit', (req, res) => {
@@ -652,8 +658,13 @@ router.get('/reservations', (req, res) => {
   const { query, args } = buildReservationsQuery({ seasonId: req.query.season_id, q: req.query.q });
   const reservations = db.prepare(query).all(...args);
 
+  const locationsBySeason = {};
+  for (const seasonId of new Set(reservations.map((r) => r.holiday_season_id))) {
+    locationsBySeason[seasonId] = inventory.locationsForSeason(seasonId);
+  }
+
   res.render('reservations', {
-    reservations, seasons, seasonId: req.query.season_id, q: req.query.q, flash: req.query.flash,
+    reservations, seasons, seasonId: req.query.season_id, q: req.query.q, flash: req.query.flash, locationsBySeason,
   });
 });
 
@@ -727,6 +738,26 @@ router.post('/reservations/:id/count', (req, res) => {
   }
   db.prepare(`UPDATE reservations SET bed_count = ?, updated_at = datetime('now') WHERE id = ?`).run(
     newCount,
+    req.params.id
+  );
+  res.redirect(req.headers.referer || '/admin/reservations');
+});
+
+router.post('/reservations/:id/location', (req, res) => {
+  const reservation = db.prepare('SELECT * FROM reservations WHERE id = ?').get(req.params.id);
+  const newLocationId = parseInt(req.body.location_id, 10);
+  if (!reservation || !newLocationId || newLocationId === reservation.location_id) {
+    return res.redirect(req.headers.referer || '/admin/reservations');
+  }
+  const targetCapacity = inventory.getCapacity(reservation.holiday_season_id, newLocationId);
+  if (!targetCapacity || targetCapacity.available_beds < reservation.bed_count) {
+    return res.redirect(
+      (req.headers.referer || '/admin/reservations') +
+        `?flash=${encodeURIComponent('אין מספיק מקום פנוי במקום החדש (נותרו ' + (targetCapacity ? targetCapacity.available_beds : 0) + ')')}`
+    );
+  }
+  db.prepare(`UPDATE reservations SET location_id = ?, updated_at = datetime('now') WHERE id = ?`).run(
+    newLocationId,
     req.params.id
   );
   res.redirect(req.headers.referer || '/admin/reservations');

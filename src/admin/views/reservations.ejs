@@ -56,6 +56,16 @@
         <input type="text" name="target_code" placeholder="קוד לקוח יעד" required style="width:90px">
         <button type="submit">העבר</button>
       </form>
+      <form method="post" action="/admin/reservations/<%= r.id %>/location" class="inline">
+        <select name="location_id">
+          <% (locationsBySeason[r.holiday_season_id] || []).forEach(function(loc) { %>
+          <option value="<%= loc.location_id %>" <%= loc.location_id === r.location_id ? 'selected' : '' %>>
+            <%= loc.location_name %> (פנויות: <%= loc.available_beds %>)
+          </option>
+          <% }) %>
+        </select>
+        <button type="submit">עדכן מקום</button>
+      </form>
     </td>
   </tr>
   <% }) %>
