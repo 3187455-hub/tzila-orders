@@ -69,6 +69,31 @@
 <% } %>
 
 <div class="card">
+  <h3>הזמנות פעילות</h3>
+  <% if (activeReservations.length === 0) { %>
+  <p style="color:#777;">אין הזמנות פעילות</p>
+  <% } else { %>
+  <table>
+    <tr><th>חג</th><th>מקום</th><th>מיטות</th><th>סטטוס</th><th>העברה ללקוח אחר (לפי קוד)</th></tr>
+    <% activeReservations.forEach(function(r) { %>
+    <tr>
+      <td><%= r.holiday_name %> <%= r.year_label %></td>
+      <td><%= r.location_name %></td>
+      <td><%= r.bed_count %></td>
+      <td class="<%= r.status === 'paid' ? 'badge-paid' : 'badge-pending' %>"><%= r.status === 'paid' ? 'שולם' : 'ממתין לתשלום' %></td>
+      <td>
+        <form method="post" action="/admin/reservations/<%= r.id %>/transfer" class="inline" onsubmit="return confirm('להעביר הזמנה זו ללקוח אחר?')">
+          <input type="text" name="target_code" placeholder="קוד לקוח יעד" required style="width:100px">
+          <button type="submit">העבר</button>
+        </form>
+      </td>
+    </tr>
+    <% }) %>
+  </table>
+  <% } %>
+</div>
+
+<div class="card">
   <h3>הוספת הזמנת מיטות ידנית</h3>
   <form method="post" action="/admin/customers/<%= customer.id %>/reservations">
     <label>חג / מקום</label>

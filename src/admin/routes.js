@@ -479,7 +479,18 @@ router.get('/customers/:id', (req, res) => {
        ORDER BY hs.id DESC, l.sort_order`
     )
     .all();
-  res.render('customer_view', { customer, balance, bookableOptions, flash: req.query.flash });
+  const activeReservations = db
+    .prepare(
+      `SELECT r.*, l.name AS location_name, h.name AS holiday_name, hs.year_label
+       FROM reservations r
+       JOIN locations l ON l.id = r.location_id
+       JOIN holiday_seasons hs ON hs.id = r.holiday_season_id
+       JOIN holidays h ON h.id = hs.holiday_id
+       WHERE r.customer_id = ? AND r.status != 'cancelled'
+       ORDER BY hs.id DESC, l.sort_order`
+    )
+    .all(customer.id);
+  res.render('customer_view', { customer, balance, bookableOptions, activeReservations, flash: req.query.flash });
 });
 
 router.get('/customers/:id/edit', (req, res) => {
@@ -731,6 +742,25 @@ router.post('/reservations/:id/cancel', (req, res) => {
     });
     applyAvailableCreditToPending(reservation.customer_id);
   }
+  res.redirect(req.headers.referer || '/admin/reservations');
+});
+
+router.post('/reservations/:id/transfer', (req, res) => {
+  const targetCode = (req.body.target_code || '').trim();
+  const reservation = db.prepare('SELECT * FROM reservations WHERE id = ?').get(req.params.id);
+  if (!reservation) return res.redirect(req.headers.referer || '/admin/reservations');
+  const targetCustomer = db.prepare('SELECT * FROM customers WHERE code = ?').get(targetCode);
+  if (!targetCustomer) {
+    return res.redirect(
+      (req.headers.referer || '/admin/reservations') + `?flash=${encodeURIComponent('לא נמצא לקוח עם קוד ' + targetCode)}`
+    );
+  }
+  if (targetCustomer.id === reservation.customer_id) {
+    return res.redirect(
+      (req.headers.referer || '/admin/reservations') + `?flash=${encodeURIComponent('זה כבר הלקוח הנוכחי של ההזמנה')}`
+    );
+  }
+  db.prepare('UPDATE reservations SET customer_id = ? WHERE id = ?').run(targetCustomer.id, reservation.id);
   res.redirect(req.headers.referer || '/admin/reservations');
 });
 

@@ -52,6 +52,10 @@
       <form method="post" action="/admin/reservations/<%= r.id %>/cancel" class="inline" onsubmit="return confirm('למחוק את ההזמנה הזו?')">
         <button type="submit" class="danger">מחק</button>
       </form>
+      <form method="post" action="/admin/reservations/<%= r.id %>/transfer" class="inline" onsubmit="return confirm('להעביר הזמנה זו ללקוח אחר?')">
+        <input type="text" name="target_code" placeholder="קוד לקוח יעד" required style="width:90px">
+        <button type="submit">העבר</button>
+      </form>
     </td>
   </tr>
   <% }) %>
