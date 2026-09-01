@@ -489,9 +489,12 @@ router.post('/customers/:id', (req, res) => {
 
 router.post('/customers/:id/delete', requireManager, (req, res) => {
   const customerId = req.params.id;
+  const force = req.body.force === '1';
   // חוסמים מחיקה רק אם יש היסטוריה "אמיתית" - הזמנה שלא בוטלה, תשלום
   // או תרומה שהצליחו, או יתרת זכות שאינה אפס. היסטוריה "לא משמעותית"
-  // (הזמנות שבוטלו, חיובים שנכשלו, שיחות) נמחקת יחד עם הלקוח.
+  // (הזמנות שבוטלו, חיובים שנכשלו, שיחות) נמחקת יחד עם הלקוח. אפשר
+  // לעקוף את הבדיקה הזו במפורש (force) - למשל לקוחות בדיקה עם היסטוריה
+  // אמיתית שנוצרה בטעות.
   const hasRealReservation = db
     .prepare(`SELECT 1 FROM reservations WHERE customer_id = ? AND status != 'cancelled' LIMIT 1`)
     .get(customerId);
@@ -503,10 +506,12 @@ router.post('/customers/:id/delete', requireManager, (req, res) => {
     .get(customerId);
   const balance = credit.getBalance(customerId);
 
-  if (hasRealReservation || hasSuccessfulCharge || hasSuccessfulDonation || balance !== 0) {
+  if (!force && (hasRealReservation || hasSuccessfulCharge || hasSuccessfulDonation || balance !== 0)) {
     return res.redirect(
       `/admin/customers/${customerId}?flash=` +
-        encodeURIComponent('לא ניתן למחוק לקוח שיש לו הזמנה בפועל, תשלום/תרומה שהצליחו, או יתרת זכות שאינה אפס')
+        encodeURIComponent(
+          'ללקוח הזה יש הזמנה בפועל, תשלום/תרומה שהצליחו, או יתרת זכות שאינה אפס. סמן "מחק גם אם יש היסטוריה" כדי למחוק בכל זאת.'
+        )
     );
   }
 
@@ -574,13 +579,9 @@ router.get('/recording/:customerId', async (req, res) => {
 });
 
 // ---------- הזמנות ----------
-router.get('/reservations', (req, res) => {
-  const seasons = db
-    .prepare(
-      `SELECT hs.*, h.name AS holiday_name FROM holiday_seasons hs JOIN holidays h ON h.id = hs.holiday_id ORDER BY hs.id DESC`
-    )
-    .all();
+const RESERVATION_SEARCH_FIELDS = ['c.first_name', 'c.last_name', 'c.code', 'l.name', 'h.name', 'hs.year_label'];
 
+function buildReservationsQuery({ seasonId, q }) {
   let query = `
     SELECT r.*, c.first_name, c.last_name, c.code AS customer_code, l.name AS location_name, h.name AS holiday_name, hs.year_label
     FROM reservations r
@@ -591,14 +592,66 @@ router.get('/reservations', (req, res) => {
     WHERE r.status != 'cancelled'
   `;
   const args = [];
-  if (req.query.season_id) {
+  if (seasonId) {
     query += ' AND r.holiday_season_id = ?';
-    args.push(req.query.season_id);
+    args.push(seasonId);
+  }
+  if (q) {
+    // כל מילה בחיפוש צריכה להימצא באיזשהו שדה - כמו בחיפוש לקוחות
+    const words = q.trim().split(/\s+/).filter(Boolean);
+    for (const w of words) {
+      query += ` AND (${RESERVATION_SEARCH_FIELDS.map((f) => `${f} LIKE ?`).join(' OR ')})`;
+      for (let i = 0; i < RESERVATION_SEARCH_FIELDS.length; i++) args.push(`%${w}%`);
+    }
   }
   query += ' ORDER BY r.created_at DESC';
+  return { query, args };
+}
+
+router.get('/reservations', (req, res) => {
+  const seasons = db
+    .prepare(
+      `SELECT hs.*, h.name AS holiday_name FROM holiday_seasons hs JOIN holidays h ON h.id = hs.holiday_id ORDER BY hs.id DESC`
+    )
+    .all();
+
+  const { query, args } = buildReservationsQuery({ seasonId: req.query.season_id, q: req.query.q });
   const reservations = db.prepare(query).all(...args);
 
-  res.render('reservations', { reservations, seasons, seasonId: req.query.season_id, flash: req.query.flash });
+  res.render('reservations', {
+    reservations, seasons, seasonId: req.query.season_id, q: req.query.q, flash: req.query.flash,
+  });
+});
+
+router.get('/reservations/export.csv', (req, res) => {
+  const { query, args } = buildReservationsQuery({ seasonId: req.query.season_id, q: req.query.q });
+  const reservations = db.prepare(query).all(...args);
+
+  const headers = ['קוד לקוח', 'שם פרטי', 'שם משפחה', 'חג', 'שנה', 'מקום', 'מיטות', 'מחיר למיטה', 'סה"כ', 'סטטוס'];
+  const escape = (v) => `"${String(v === null || v === undefined ? '' : v).replace(/"/g, '""')}"`;
+  const lines = [headers.map(escape).join(',')];
+  for (const r of reservations) {
+    lines.push(
+      [
+        r.customer_code || r.customer_id,
+        r.first_name || '',
+        r.last_name || '',
+        r.holiday_name,
+        r.year_label,
+        r.location_name,
+        r.bed_count,
+        r.price_per_bed_snapshot,
+        r.bed_count * r.price_per_bed_snapshot,
+        r.status === 'paid' ? 'שולם' : 'ממתין לתשלום',
+      ]
+        .map(escape)
+        .join(',')
+    );
+  }
+  const csv = '﻿' + lines.join('\n') + '\n';
+  res.set('Content-Type', 'text/csv; charset=utf-8');
+  res.set('Content-Disposition', 'attachment; filename="reservations.csv"');
+  res.send(csv);
 });
 
 router.post('/reservations/:id/mark-paid', (req, res) => {

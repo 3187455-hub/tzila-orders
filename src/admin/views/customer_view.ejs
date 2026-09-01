@@ -61,7 +61,8 @@
 <div class="card">
   <h3>מחיקת לקוח</h3>
   <p style="color:#777; font-size:13px;">ניתן למחוק לקוח כל עוד אין לו הזמנה בפועל (לא מבוטלת), תשלום או תרומה שהצליחו, או יתרת זכות שאינה אפס. היסטוריה אחרת (הזמנות שבוטלו, חיובים שנכשלו) נמחקת יחד עם הלקוח. פעולה זו בלתי הפיכה.</p>
-  <form method="post" action="/admin/customers/<%= customer.id %>/delete" onsubmit="return confirm('למחוק את הלקוח לצמיתות? פעולה זו בלתי הפיכה.')">
+  <form method="post" action="/admin/customers/<%= customer.id %>/delete" onsubmit="return confirm(this.force.checked ? 'הלקוח הזה יש לו היסטוריה אמיתית (הזמנה/תשלום/זכות) - למחוק אותה לצמיתות יחד איתו?' : 'למחוק את הלקוח לצמיתות? פעולה זו בלתי הפיכה.')">
+    <p><label style="display:inline; font-weight:normal;"><input type="checkbox" name="force" value="1" style="width:auto"> מחק גם אם יש היסטוריה אמיתית (הזמנה ששולמה, תשלום/תרומה שהצליחו, יתרת זכות) - משמש לניקוי לקוחות בדיקה</label></p>
     <button type="submit" class="danger">מחק לקוח</button>
   </form>
 </div>
