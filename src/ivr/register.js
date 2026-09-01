@@ -255,7 +255,16 @@ async function handle(req, res) {
           const newIds = new Set(sess.data.newReservationIds || []);
           if (reservation) newIds.add(reservation.id);
           session.updateSession(callId, { step: 'after_location', data: { newReservationIds: [...newIds] } });
-          return res.send(readDigits('נרשם עוד מקום באותו חג הקש 1 לחג אחר או לסיום הקש 2', 'AFTER_LOC', { max: 1 }));
+          return res.send(
+            readDigits(
+              [
+                'אם ברצונך להירשם לעוד מקום בחג זה הקש 1',
+                'ואם ברצונך להירשם גם למקומות בחג אחר או לסיום ההזמנה הקש 2',
+              ],
+              'AFTER_LOC',
+              { max: 1 }
+            )
+          );
         }
         session.updateSession(callId, { step: 'ask_bed_count' });
         return res.send(askBedCountDirective(capacity.available_beds));
