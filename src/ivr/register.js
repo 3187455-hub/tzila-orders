@@ -55,8 +55,12 @@ function locationListDirective(seasonId, sess) {
     data: { currentLocations: locations.map((l) => l.location_id) },
   });
   const total = locations.reduce((sum, l) => sum + l.available_beds, 0);
-  const parts = locations.map((l, i) => `ל${l.location_name} נשאר ${l.available_beds} לבחירה הקש ${i + 1}`);
-  const lines = [`נותרו במערכת ${total} מיטות`, ...parts];
+  // הניסוח שונה בכוונה (לא רק תיקון קוסמטי) - חשד לעיוות קול מתקבע
+  // אצל ימות המשיח על נוסח קודם שנשמע פגום מהמילה הראשונה ובאופן קבוע
+  // (התחיל אחרי השמעה חלקית פעם אחת, ומאז עקבי) - מתאים לתבנית של
+  // הקלטת TTS פגומה שנשמרה במטמון. שינוי הניסוח מכריח יצירת הקלטה חדשה.
+  const parts = locations.map((l, i) => `במקום ${l.location_name} יש ${l.available_beds} מיטות פנויות, לבחירה הקש ${i + 1}`);
+  const lines = [`יש כרגע ${total} מיטות פנויות בסך הכל`, ...parts];
   return { directive: readDigits(lines, 'LOC_NUM', { max: 1 }), empty: false };
 }
 
