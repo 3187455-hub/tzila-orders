@@ -113,11 +113,17 @@ async function lookupLastNumFromHistory({ amount, withinMinutes = 5 }) {
     return null;
   }
   try {
+    // מתיעוד רשמי: התוצאות ממוינות לפי מזהה עולה (הכי חדש בסוף), ובלי
+    // LastId ההתחלה היא מהעסקה הראשונה שבוצעה אי-פעם למוסד - לא
+    // "האחרונות". קודם ביקשנו רק MaxId=20 בלי LastId, כך שתמיד קיבלנו
+    // את 20 העסקאות ה*ישנות* ביותר (מאומת: אותן 20 שורות בכל בדיקה,
+    // בלי קשר לתשלום החדש). לוקחים MaxId גדול (עד 2000, המקסימום
+    // המתועד) כדי לכלול גם את העדכני ביותר, ומחפשים מהסוף אחורה.
     const body = new URLSearchParams({
       Action: 'GetHistoryJson',
       MosadId: config.nedarimPlus.terminalNumber,
       ApiPassword: config.nedarimPlus.apiPassword,
-      MaxId: '20',
+      MaxId: '2000',
     });
     const res = await fetch('https://matara.pro/nedarimplus/Reports/Manage3.aspx', { method: 'POST', body });
     const text = await res.text();
@@ -150,7 +156,8 @@ async function lookupLastNumFromHistory({ amount, withinMinutes = 5 }) {
       `${partVal('year')}-${partVal('month')}-${partVal('day')}T${partVal('hour')}:${partVal('minute')}:${partVal('second')}`
     ).getTime();
 
-    const match = rows.find((r) => {
+    // מהסוף להתחלה - הכי עדכני קודם (התוצאות ממוינות לפי מזהה עולה)
+    const match = [...rows].reverse().find((r) => {
       const amt = parseFloat(r.Amount);
       if (Number.isNaN(amt) || Math.abs(amt - amount) > 0.01) return false;
       const m = /(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})/.exec(r.TransactionTime || '');
@@ -160,7 +167,8 @@ async function lookupLastNumFromHistory({ amount, withinMinutes = 5 }) {
       return Math.abs(now - t) <= withinMinutes * 60 * 1000;
     });
     if (!match) {
-      console.warn(`lookupLastNumFromHistory: לא נמצאה שורה מתאימה. סכומים שהתקבלו: ${rows.map((r) => r.Amount).slice(0, 10).join(', ')}`);
+      const recentAmounts = rows.slice(-10).map((r) => `${r.Amount} (${r.TransactionTime})`);
+      console.warn(`lookupLastNumFromHistory: לא נמצאה שורה מתאימה. 10 העסקאות האחרונות: ${recentAmounts.join(', ')}`);
     } else {
       console.log(`lookupLastNumFromHistory: נמצאה התאמה, LastNum=${match.LastNum}`);
     }
