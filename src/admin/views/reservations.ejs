@@ -54,6 +54,12 @@
       </form>
       <form method="post" action="/admin/reservations/<%= r.id %>/transfer" class="inline" onsubmit="return confirm('להעביר הזמנה זו ללקוח אחר?')">
         <input type="text" name="target_code" placeholder="קוד לקוח יעד" required style="width:90px">
+        <% if (r.status === 'paid') { %>
+        <select name="payment_handling">
+          <option value="transfer">להעביר גם את התשלום</option>
+          <option value="credit">להשאיר זכות אצל הלקוח הנוכחי, החדש ימתין לתשלום</option>
+        </select>
+        <% } %>
         <button type="submit">העבר</button>
       </form>
       <form method="post" action="/admin/reservations/<%= r.id %>/location" class="inline">

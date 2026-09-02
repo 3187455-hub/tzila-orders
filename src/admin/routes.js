@@ -816,7 +816,25 @@ router.post('/reservations/:id/transfer', (req, res) => {
       (req.headers.referer || '/admin/reservations') + `?flash=${encodeURIComponent('זה כבר הלקוח הנוכחי של ההזמנה')}`
     );
   }
-  db.prepare('UPDATE reservations SET customer_id = ? WHERE id = ?').run(targetCustomer.id, reservation.id);
+
+  // אם ההזמנה כבר שולמה - צריך להחליט מה קורה עם התשלום: להעביר אותו
+  // גם כן ללקוח החדש (הוא "יורש" את מה ששולם), או להשאיר את הזכות
+  // הכספית אצל הלקוח המקורי ולסמן את ההזמנה כממתינה לתשלום אצל החדש
+  if (reservation.status === 'paid' && req.body.payment_handling === 'credit') {
+    const value = reservation.bed_count * reservation.price_per_bed_snapshot;
+    credit.addCredit(reservation.customer_id, value, 'זיכוי בגין העברת הזמנה ששולמה ללקוח אחר', {
+      reservationId: reservation.id,
+    });
+    db.prepare(`UPDATE reservations SET customer_id = ?, status = 'pending_payment', payment_charge_id = NULL, updated_at = datetime('now') WHERE id = ?`).run(
+      targetCustomer.id,
+      reservation.id
+    );
+  } else {
+    if (reservation.payment_charge_id) {
+      db.prepare('UPDATE payment_charges SET customer_id = ? WHERE id = ?').run(targetCustomer.id, reservation.payment_charge_id);
+    }
+    db.prepare('UPDATE reservations SET customer_id = ? WHERE id = ?').run(targetCustomer.id, reservation.id);
+  }
   res.redirect(req.headers.referer || '/admin/reservations');
 });
 
