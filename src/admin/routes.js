@@ -568,10 +568,23 @@ router.post('/customers/:id/delete', requireManager, (req, res) => {
 
   try {
     db.exec('BEGIN');
-    db.prepare('DELETE FROM reservations WHERE customer_id = ?').run(customerId);
-    db.prepare('DELETE FROM payment_charges WHERE customer_id = ?').run(customerId);
-    db.prepare('DELETE FROM donations WHERE customer_id = ?').run(customerId);
+    // credit_ledger מפנה גם להזמנות וגם לחיובים - חייב להימחק לפניהם.
+    // חיוב שעדיין מפנה אליו הזמנה של לקוח אחר (יכול לקרות אחרי "העברת
+    // הזמנה ללקוח אחר" שלא מעבירה את החיוב המקורי) לא נמחק - במקום
+    // זאת מעבירים את הבעלות עליו ללקוח שההזמנה שייכת לו בפועל עכשיו
+    // (אחרת אי אפשר למחוק גם את הלקוח הנוכחי, כי הוא עדיין "בעל" חיוב קיים).
     db.prepare('DELETE FROM credit_ledger WHERE customer_id = ?').run(customerId);
+    db.prepare('DELETE FROM reservations WHERE customer_id = ?').run(customerId);
+    const chargeIds = db.prepare('SELECT id FROM payment_charges WHERE customer_id = ?').all(customerId).map((r) => r.id);
+    for (const chargeId of chargeIds) {
+      const referencing = db.prepare('SELECT customer_id FROM reservations WHERE payment_charge_id = ? LIMIT 1').get(chargeId);
+      if (referencing) {
+        db.prepare('UPDATE payment_charges SET customer_id = ? WHERE id = ?').run(referencing.customer_id, chargeId);
+      } else {
+        db.prepare('DELETE FROM payment_charges WHERE id = ?').run(chargeId);
+      }
+    }
+    db.prepare('DELETE FROM donations WHERE customer_id = ?').run(customerId);
     db.prepare('DELETE FROM call_sessions WHERE customer_id = ?').run(customerId);
     db.prepare('DELETE FROM call_logs WHERE customer_id = ?').run(customerId);
     db.prepare('DELETE FROM customers WHERE id = ?').run(customerId);
