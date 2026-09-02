@@ -5,11 +5,16 @@
 
 <table>
   <tr>
-    <th>טלפון</th><th>תאריך</th><th>הקלטה</th><th>נשלח מייל</th><th></th>
+    <th>טופל</th><th>טלפון</th><th>תאריך</th><th>הקלטה</th><th>נשלח מייל</th><th></th>
   </tr>
-  <% if (messages.length === 0) { %><tr><td colspan="5">אין הודעות</td></tr><% } %>
+  <% if (messages.length === 0) { %><tr><td colspan="6">אין הודעות</td></tr><% } %>
   <% messages.forEach(function(m) { %>
-  <tr>
+  <tr style="<%= m.handled ? 'opacity:0.55;' : '' %>">
+    <td>
+      <form method="post" action="/admin/messages/<%= m.id %>/toggle-handled" class="inline">
+        <button type="submit" class="<%= m.handled ? '' : 'danger' %>"><%= m.handled ? '✔ טופל' : 'סמן כטופל' %></button>
+      </form>
+    </td>
     <td><%= m.phone || '-' %></td>
     <td><%= m.created_at %></td>
     <td>

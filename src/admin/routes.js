@@ -120,8 +120,16 @@ router.post('/settings', (req, res) => {
 
 // ---------- הודעות שהושארו בשלוחת "השארת הודעה" ----------
 router.get('/messages', (req, res) => {
-  const messages = db.prepare('SELECT * FROM messages ORDER BY id DESC').all();
+  const messages = db.prepare('SELECT * FROM messages ORDER BY handled ASC, id DESC').all();
   res.render('messages', { messages, flash: req.query.flash });
+});
+
+router.post('/messages/:id/toggle-handled', (req, res) => {
+  const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(req.params.id);
+  if (message) {
+    db.prepare('UPDATE messages SET handled = ? WHERE id = ?').run(message.handled ? 0 : 1, message.id);
+  }
+  res.redirect('/admin/messages');
 });
 
 router.get('/messages/:id/recording', async (req, res) => {

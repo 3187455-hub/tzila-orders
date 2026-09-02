@@ -49,4 +49,8 @@ if (!columnExists('customers', 'blocked')) {
   db.exec('ALTER TABLE customers ADD COLUMN blocked INTEGER NOT NULL DEFAULT 0');
 }
 
+if (!columnExists('messages', 'handled')) {
+  db.exec('ALTER TABLE messages ADD COLUMN handled INTEGER NOT NULL DEFAULT 0');
+}
+
 module.exports = db;
