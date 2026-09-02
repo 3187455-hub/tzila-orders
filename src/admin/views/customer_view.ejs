@@ -18,7 +18,10 @@
   <a href="/admin/customers/<%= customer.id %>/history">היסטוריית שיחות והזמנות</a>
 </p>
 <% if (customer.name_recording_path) { %>
-<p>🔊 הקלטת שם: <audio controls src="/admin/recording/<%= customer.id %>" style="vertical-align:middle;"></audio></p>
+<p>
+  🔊 הקלטת שם: <audio controls src="/admin/recording/<%= customer.id %>" style="vertical-align:middle;"></audio>
+  <a href="/admin/recording/<%= customer.id %>?download=1" style="margin-right:8px;">⬇ הורדה כקובץ (אם הניגון לא עובד)</a>
+</p>
 <% } %>
 
 <div class="card">

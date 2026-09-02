@@ -130,6 +130,9 @@ router.get('/messages/:id/recording', async (req, res) => {
   try {
     const buf = await yemotFiles.downloadBinaryFile(message.recording_path);
     res.set('Content-Type', 'audio/wav');
+    // הורדה כקובץ במקום ניגון מוטמע - חלק ממערכות סינון תוכן חוסמות
+    // סטרימינג של מדיה מוטמעת אבל לא הורדת קובץ רגילה
+    if (req.query.download === '1') res.set('Content-Disposition', `attachment; filename="message-${message.id}.wav"`);
     res.send(buf);
   } catch (e) {
     res.status(502).send('שגיאה בהבאת ההקלטה מימות המשיח: ' + e.message);
@@ -612,6 +615,7 @@ router.get('/recording/:customerId', async (req, res) => {
   try {
     const buf = await yemotFiles.downloadBinaryFile(customer.name_recording_path);
     res.set('Content-Type', 'audio/wav');
+    if (req.query.download === '1') res.set('Content-Disposition', `attachment; filename="customer-${customer.id}.wav"`);
     res.send(buf);
   } catch (e) {
     res.status(502).send('שגיאה בהבאת ההקלטה מימות המשיח: ' + e.message);

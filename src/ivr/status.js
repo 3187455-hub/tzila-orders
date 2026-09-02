@@ -27,7 +27,7 @@ function buildMenuDirective(callId, customerId) {
   const all = inventory.allReservationsForCustomer(customerId);
   if (all.length === 0) {
     session.updateSession(callId, { step: 'done' });
-    return combine(sayText('לא נמצאה אצלך שום הזמנה כרגע תודה'), hangupNow());
+    return combine(sayText('לא מצאנו אצלך אף הזמנה פתוחה במערכת כרגע, תודה רבה לך'), hangupNow());
   }
 
   const byHoliday = [];

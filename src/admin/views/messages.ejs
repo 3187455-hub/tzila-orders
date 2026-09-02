@@ -15,6 +15,7 @@
     <td>
       <% if (m.recording_path) { %>
       <audio controls src="/admin/messages/<%= m.id %>/recording" style="height:32px;"></audio>
+      <a href="/admin/messages/<%= m.id %>/recording?download=1" style="margin-right:8px;">⬇ הורדה</a>
       <% } else { %>אין הקלטה<% } %>
     </td>
     <td><%= m.email_sent ? 'כן' : 'לא' %></td>
