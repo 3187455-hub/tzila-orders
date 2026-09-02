@@ -274,11 +274,14 @@ async function handle(req, res) {
           const newIds = new Set(sess.data.newReservationIds || []);
           if (reservation) newIds.add(reservation.id);
           session.updateSession(callId, { step: 'after_location', data: { newReservationIds: [...newIds] } });
+          // ניסוח שונה בכוונה (לא רק תיקון) - חשד להקלטת TTS שנתקעה
+          // פגומה על הניסוח הקודם, מדווח כאותה תקלת עיוות קול שכבר
+          // תוקנה במקומות אחרים בעזרת שינוי טקסט
           return res.send(
             readDigits(
               [
-                'אם ברצונך להירשם לעוד מקום בחג זה הקש 1',
-                'ואם ברצונך להירשם גם למקומות בחג אחר או לסיום ההזמנה הקש 2',
+                'להוספת מקום נוסף באותו חג הקש 1',
+                'למעבר לחג אחר או לסיום ההזמנה הקש 2',
               ],
               'AFTER_LOC',
               { max: 1 }
