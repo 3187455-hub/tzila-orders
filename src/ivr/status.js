@@ -41,7 +41,7 @@ function buildMenuDirective(callId, customerId) {
   }
   const lines = [];
   for (const g of byHoliday) {
-    lines.push(`לחג ${g.holiday_name}`);
+    lines.push(`לגבי החג ${g.holiday_name} יש לך את ההזמנות הבאות`);
     for (const r of g.items) {
       lines.push(
         r.status === 'paid'
@@ -64,14 +64,14 @@ function buildMenuDirective(callId, customerId) {
     if (balance > 0) {
       lines.push(`יש לך גם יתרת זכות של ${balance} שקלים תוכל להחליט על השימוש בה בזמן התשלום`);
     }
-    lines.push('לתשלום עכשיו הקש 1');
-    lines.push('לעריכה או מחיקה של הזמנה הקש 2');
-    lines.push('לסיום הקש 9');
+    lines.push('לתשלום מיידי של הסכום הזה הקש 1');
+    lines.push('לעריכה או מחיקה של הזמנה קיימת הקש 2');
+    lines.push('לסיום השיחה הקש 9');
   } else {
-    lines.push('כל ההזמנות שולמו');
+    lines.push('כל ההזמנות שלך כבר שולמו במלואן');
     if (balance > 0) lines.push(`יש לך יתרת זכות של ${balance} שקלים לשימוש בהזמנה הבאה`);
-    lines.push('לעריכה או מחיקה של הזמנה הקש 2');
-    lines.push('לסיום הקש 9');
+    lines.push('לעריכה או מחיקה של הזמנה קיימת הקש 2');
+    lines.push('לסיום השיחה הקש 9');
   }
 
   return combine(readDigits(lines, 'MENU_CHOICE', { max: 1 }));
@@ -86,7 +86,7 @@ function buildEditListDirective(callId, customerId) {
   const lines = pending.map(
     (r, i) => `הקש ${i + 1} עבור ${r.bed_count} מיטות במקום ${r.location_name} לחג ${r.holiday_name}`
   );
-  lines.push('ולסיום הקש סולמית');
+  lines.push('לאחר הקלדת המספר הקש סולמית לסיום');
   return combine(readDigits(lines, 'EDIT_NUM', { max: 2 }));
 }
 
@@ -105,7 +105,7 @@ function startPaymentOrCredit(callId, customerId, total, creditToApply) {
     });
     session.updateSession(callId, { step: 'done' });
     session.endSession(callId);
-    return combine(sayText([`כל הסכום ${creditToApply} שקלים קוזז מיתרת הזכות שלך`, 'תודה']), hangupNow());
+    return combine(sayText([`כל הסכום ${creditToApply} שקלים קוזז מיתרת הזכות שלך`, 'תודה רבה לך']), hangupNow());
   }
   session.updateSession(callId, { step: 'charging', data: { amountToCharge, creditToApply } });
   return nedarim.buildChargeDirective(amountToCharge);
@@ -124,7 +124,7 @@ async function handle(req, res) {
         const customer = customers.findByPhone(phone);
         if (!customer) {
           session.updateSession(callId, { step: 'done' });
-          return res.send(combine(sayText('לא זיהינו מספר זה במערכת. תודה'), hangupNow()));
+          return res.send(combine(sayText('לא זיהינו את מספר הטלפון הזה במערכת, תודה רבה'), hangupNow()));
         }
         session.updateSession(callId, { customerId: customer.id });
         return res.send(buildMenuDirective(callId, customer.id));
@@ -140,7 +140,7 @@ async function handle(req, res) {
               readDigits(
                 [
                   `יש לך יתרת זכות בסך ${balance} שקלים`,
-                  'לקיזוז מהסכום עכשיו הקש 1',
+                  'אם ברצונך לקזז את הזכות מהסכום עכשיו הקש 1',
                   `להשאיר את הזכות לפעם הבאה ולשלם ${pendingTotal} שקלים באשראי הקש 2`,
                 ],
                 'CREDIT_CHOICE',
@@ -154,7 +154,7 @@ async function handle(req, res) {
           return res.send(buildEditListDirective(callId, sess.customer_id));
         }
         session.updateSession(callId, { step: 'done' });
-        return res.send(combine(sayText('תודה ולהתראות'), hangupNow()));
+        return res.send(combine(sayText('תודה רבה ולהתראות'), hangupNow()));
       }
 
       case 'choose_credit': {
@@ -231,27 +231,27 @@ async function handle(req, res) {
         if (success) {
           msg =
             creditToApply > 0
-              ? `קוזזו ${creditToApply} שקלים מהזכות שלך, ו-${amountToCharge} שקלים חויבו באשראי. תודה`
-              : 'התשלום התקבל בהצלחה. תודה';
+              ? `קוזזו ${creditToApply} שקלים מהזכות שלך, ו-${amountToCharge} שקלים חויבו באשראי, תודה רבה לך`
+              : 'התשלום שלך התקבל בהצלחה, תודה רבה לך';
         } else {
-          msg = 'התשלום נכשל, נסה שוב מאוחר יותר';
+          msg = 'התשלום נכשל, אנא נסה שוב מאוחר יותר';
         }
         return res.send(combine(sayText(msg), hangupNow()));
       }
 
       case 'done': {
         session.endSession(callId);
-        return res.send(combine(sayText('תודה, להתראות'), hangupNow()));
+        return res.send(combine(sayText('תודה רבה לך, להתראות'), hangupNow()));
       }
 
       default: {
         session.endSession(callId);
-        return res.send(combine(sayText('אירעה שגיאה, נא להתקשר שוב'), hangupNow()));
+        return res.send(combine(sayText('אירעה שגיאה, אנא נסה להתקשר שוב'), hangupNow()));
       }
     }
   } catch (err) {
     console.error('IVR status error', err);
-    return res.send(combine(sayText('אירעה שגיאה במערכת'), hangupNow()));
+    return res.send(combine(sayText('אירעה שגיאה כללית במערכת'), hangupNow()));
   }
 }
 

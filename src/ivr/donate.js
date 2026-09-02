@@ -18,13 +18,13 @@ async function handle(req, res) {
         let customer = customers.findByPhone(phone);
         if (!customer) customer = customers.createMinimal({ phone });
         session.updateSession(callId, { step: 'ask_amount', customerId: customer.id });
-        return res.send(readDigits('כמה ברצונך לתרום בשקלים', 'AMOUNT', { max: 5 }));
+        return res.send(readDigits('כמה שקלים ברצונך לתרום היום', 'AMOUNT', { max: 5 }));
       }
 
       case 'ask_amount': {
         const amount = parseInt(p('AMOUNT'), 10);
         if (!amount || amount <= 0) {
-          return res.send(combine(sayText('הסכום שהקשת אינו תקין'), readDigits('כמה ברצונך לתרום בשקלים', 'AMOUNT', { max: 5 })));
+          return res.send(combine(sayText('הסכום שהקשת אינו תקין, נסה שוב'), readDigits('כמה שקלים ברצונך לתרום היום', 'AMOUNT', { max: 5 })));
         }
         const result = db
           .prepare('INSERT INTO donations (customer_id, amount, status, call_id) VALUES (?, ?, ?, ?)')
@@ -52,18 +52,18 @@ async function handle(req, res) {
         }
         session.endSession(callId);
         return res.send(
-          combine(sayText(success ? 'תודה רבה על תרומתך' : 'התרומה נכשלה אפשר לנסות שוב'), hangupNow())
+          combine(sayText(success ? 'תודה רבה לך על תרומתך הנדיבה' : 'התרומה נכשלה, אפשר לנסות שוב מאוחר יותר'), hangupNow())
         );
       }
 
       default: {
         session.endSession(callId);
-        return res.send(combine(sayText('אירעה שגיאה'), hangupNow()));
+        return res.send(combine(sayText('אירעה שגיאה, אנא נסה שוב'), hangupNow()));
       }
     }
   } catch (err) {
     console.error('IVR donate error', err);
-    return res.send(combine(sayText('אירעה שגיאה במערכת'), hangupNow()));
+    return res.send(combine(sayText('אירעה שגיאה כללית במערכת'), hangupNow()));
   }
 }
 

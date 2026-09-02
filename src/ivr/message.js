@@ -20,7 +20,7 @@ async function handle(req, res) {
         session.updateSession(callId, { step: 'recording' });
         return res.send(
           combine(
-            recordMessage(['אנא השאר את הודעתך', 'ולסיום ההקלטה הקש סולמית'], 'MESSAGE_REC')
+            recordMessage(['אנא השאר את הודעתך אחרי הצליל', 'ולסיום ההקלטה שלך הקש סולמית'], 'MESSAGE_REC')
           )
         );
       }
@@ -41,17 +41,17 @@ async function handle(req, res) {
 
         session.updateSession(callId, { step: 'done' });
         session.endSession(callId);
-        return res.send(combine(sayText('ההודעה נקלטה תודה רבה'), hangupNow()));
+        return res.send(combine(sayText('ההודעה שלך נקלטה בהצלחה, תודה רבה לך'), hangupNow()));
       }
 
       default: {
         session.endSession(callId);
-        return res.send(combine(sayText('אירעה שגיאה'), hangupNow()));
+        return res.send(combine(sayText('אירעה שגיאה, אנא נסה שוב'), hangupNow()));
       }
     }
   } catch (err) {
     console.error('IVR message error', err);
-    return res.send(combine(sayText('אירעה שגיאה במערכת'), hangupNow()));
+    return res.send(combine(sayText('אירעה שגיאה כללית במערכת'), hangupNow()));
   }
 }
 

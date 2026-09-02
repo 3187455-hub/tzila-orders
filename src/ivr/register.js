@@ -236,7 +236,7 @@ async function handle(req, res) {
         const capacity = locationId ? inventory.getCapacity(seasonId, locationId) : null;
         if (!capacity || capacity.available_beds <= 0) {
           const { directive, empty } = locationListDirective(seasonId, sess);
-          if (empty) return res.send(combine(sayText('אין מקומות פנויים כרגע'), holidayMenuDirective(sess)));
+          if (empty) return res.send(combine(sayText('אין כרגע מקומות פנויים לחג זה'), holidayMenuDirective(sess)));
           return res.send(combine(sayText('המספר שהקשת אינו תואם אף אחד מהמקומות ברשימה'), directive));
         }
         session.updateSession(callId, {
@@ -374,7 +374,7 @@ async function handle(req, res) {
 
       case 'done': {
         session.endSession(callId);
-        return res.send(combine(sayText('תודה להתראות'), hangupNow()));
+        return res.send(combine(sayText('תודה רבה לך, להתראות'), hangupNow()));
       }
 
       default: {
