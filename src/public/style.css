@@ -17,6 +17,9 @@ header.topbar {
 header.topbar a { color: #fff; text-decoration: none; margin-left: 16px; }
 header.topbar a:hover { text-decoration: underline; }
 main { max-width: 1000px; margin: 20px auto; padding: 0 16px; }
+main.wide { max-width: 1500px; }
+td.actions-col { min-width: 260px; }
+td.actions-col form.inline { display: block; margin-bottom: 6px; }
 h1 { font-size: 22px; }
 table { border-collapse: collapse; width: 100%; background: #fff; margin-bottom: 20px; }
 th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: right; }

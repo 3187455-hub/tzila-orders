@@ -124,6 +124,13 @@ router.get('/messages', (req, res) => {
   res.render('messages', { messages, flash: req.query.flash });
 });
 
+router.post('/messages/:id/reply', (req, res) => {
+  const replyText = (req.body.reply_text || '').trim();
+  // reply_heard=0 - התשובה החדשה עוד לא נשמעה, תושמע ללקוח בשיחה הבאה שלו
+  db.prepare('UPDATE messages SET reply_text = ?, reply_heard = 0 WHERE id = ?').run(replyText || null, req.params.id);
+  res.redirect('/admin/messages');
+});
+
 router.post('/messages/:id/toggle-handled', (req, res) => {
   const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(req.params.id);
   if (message) {
@@ -689,7 +696,7 @@ router.get('/reservations', (req, res) => {
   }
 
   res.render('reservations', {
-    reservations, seasons, seasonId: req.query.season_id, q: req.query.q, flash: req.query.flash, locationsBySeason,
+    reservations, seasons, seasonId: req.query.season_id, q: req.query.q, flash: req.query.flash, locationsBySeason, wide: true,
   });
 });
 

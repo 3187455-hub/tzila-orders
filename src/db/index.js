@@ -53,4 +53,9 @@ if (!columnExists('messages', 'handled')) {
   db.exec('ALTER TABLE messages ADD COLUMN handled INTEGER NOT NULL DEFAULT 0');
 }
 
+if (!columnExists('messages', 'reply_text')) {
+  db.exec('ALTER TABLE messages ADD COLUMN reply_text TEXT');
+  db.exec('ALTER TABLE messages ADD COLUMN reply_heard INTEGER NOT NULL DEFAULT 0');
+}
+
 module.exports = db;

@@ -39,7 +39,7 @@
     </td>
     <td><%= r.bed_count * r.price_per_bed_snapshot %></td>
     <td class="<%= r.status === 'paid' ? 'badge-paid' : 'badge-pending' %>"><%= r.status === 'paid' ? 'שולם' : 'ממתין לתשלום' %></td>
-    <td>
+    <td class="actions-col">
       <% if (r.status !== 'paid') { %>
       <form method="post" action="/admin/reservations/<%= r.id %>/mark-paid" class="inline">
         <button type="submit">סמן כשולם</button>

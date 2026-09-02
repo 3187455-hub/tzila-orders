@@ -135,5 +135,7 @@ CREATE TABLE IF NOT EXISTS messages (
   recording_path TEXT,
   email_sent INTEGER NOT NULL DEFAULT 0,
   handled INTEGER NOT NULL DEFAULT 0,
+  reply_text TEXT,
+  reply_heard INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

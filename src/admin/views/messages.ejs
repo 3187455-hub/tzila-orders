@@ -1,14 +1,16 @@
-<%- include('partials/header', { title: 'הודעות' }) %>
+<%- include('partials/header', { title: 'הודעות', wide: true }) %>
 
 <h1>הודעות שהושארו</h1>
+<p style="color:#777; font-size:13px;">אפשר לכתוב תשובה בטקסט לכל הודעה - היא תושמע ללקוח (הוקראה בקול) בפעם הבאה שהוא מתקשר לשלוחת השארת הודעה, ואז הוא יכול להשאיר הודעת המשך.</p>
 <% if (flash) { %><div class="flash"><%= flash %></div><% } %>
 
 <table>
   <tr>
-    <th>טופל</th><th>טלפון</th><th>תאריך</th><th>הקלטה</th><th>נשלח מייל</th><th></th>
+    <th>טופל</th><th>טלפון</th><th>תאריך</th><th>הקלטה</th><th>נשלח מייל</th><th>תשובה</th><th></th>
   </tr>
-  <% if (messages.length === 0) { %><tr><td colspan="6">אין הודעות</td></tr><% } %>
+  <% if (messages.length === 0) { %><tr><td colspan="7">אין הודעות</td></tr><% } %>
   <% messages.forEach(function(m) { %>
+  <form id="reply-<%= m.id %>" method="post" action="/admin/messages/<%= m.id %>/reply"></form>
   <tr style="<%= m.handled ? 'opacity:0.55;' : '' %>">
     <td>
       <form method="post" action="/admin/messages/<%= m.id %>/toggle-handled" class="inline">
@@ -24,6 +26,13 @@
       <% } else { %>אין הקלטה<% } %>
     </td>
     <td><%= m.email_sent ? 'כן' : 'לא' %></td>
+    <td>
+      <textarea name="reply_text" form="reply-<%= m.id %>" rows="2" style="width:100%; min-width:200px;" placeholder="כתוב תשובה ללקוח..."><%= m.reply_text || '' %></textarea>
+      <% if (m.reply_text) { %>
+      <div style="font-size:11px; color:#777;"><%= m.reply_heard ? 'נשמעה על ידי הלקוח' : 'ממתינה שהלקוח יתקשר וישמע' %></div>
+      <% } %>
+      <button type="submit" form="reply-<%= m.id %>">שמור תשובה</button>
+    </td>
     <td>
       <form method="post" action="/admin/messages/<%= m.id %>/delete" class="inline" onsubmit="return confirm('למחוק את ההודעה?')">
         <button type="submit" class="danger">מחק</button>

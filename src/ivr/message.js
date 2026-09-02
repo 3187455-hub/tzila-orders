@@ -17,9 +17,22 @@ async function handle(req, res) {
   try {
     switch (sess.step) {
       case 'start': {
+        // צ'אט פנימי: אם יש תשובת מנהל שטרם נשמעה למספר הזה - משמיעים
+        // אותה קודם, ואז ממשיכים לקליטת הודעה חדשה/המשך מהמתקשר
+        const pendingReply = phone
+          ? db
+              .prepare(
+                'SELECT * FROM messages WHERE phone = ? AND reply_text IS NOT NULL AND reply_heard = 0 ORDER BY id DESC LIMIT 1'
+              )
+              .get(phone)
+          : null;
+        if (pendingReply) {
+          db.prepare('UPDATE messages SET reply_heard = 1 WHERE id = ?').run(pendingReply.id);
+        }
         session.updateSession(callId, { step: 'recording' });
         return res.send(
           combine(
+            pendingReply ? sayText(['יש לך תשובה חדשה', pendingReply.reply_text]) : null,
             recordMessage(['אנא השאר את הודעתך אחרי הצליל', 'ולסיום ההקלטה שלך הקש סולמית'], 'MESSAGE_REC')
           )
         );
