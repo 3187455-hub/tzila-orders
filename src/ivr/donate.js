@@ -10,7 +10,7 @@ async function handle(req, res) {
   const p = (name) => last(params, name);
   const callId = params.ApiCallId;
   const phone = params.ApiPhone;
-  let sess = session.getSession(callId) || session.createSession(callId, null, { ivrType: 'donate', phone });
+  let sess = session.getOrCreateSession(callId, 'donate', phone);
 
   try {
     switch (sess.step) {
