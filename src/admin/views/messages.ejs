@@ -1,45 +1,47 @@
 <%- include('partials/header', { title: 'הודעות', wide: true }) %>
 
 <h1>הודעות שהושארו</h1>
-<p style="color:#777; font-size:13px;">אפשר לכתוב תשובה בטקסט לכל הודעה - היא תושמע ללקוח (הוקראה בקול) בפעם הבאה שהוא מתקשר לשלוחת השארת הודעה, ואז הוא יכול להשאיר הודעת המשך.</p>
+<p style="color:#777; font-size:13px;">כל שיחה מקובצת לפי מספר טלפון. תשובה שתכתוב תושמע (בקול) ללקוח בפעם הבאה שהוא מתקשר לשלוחת השארת הודעה, ואז הוא יכול להשאיר הודעת המשך לאותה שיחה.</p>
 <% if (flash) { %><div class="flash"><%= flash %></div><% } %>
 
-<table>
-  <tr>
-    <th>טופל</th><th>טלפון</th><th>תאריך</th><th>הקלטה</th><th>נשלח מייל</th><th>תשובה</th><th></th>
-  </tr>
-  <% if (messages.length === 0) { %><tr><td colspan="7">אין הודעות</td></tr><% } %>
-  <% messages.forEach(function(m) { %>
-  <form id="reply-<%= m.id %>" method="post" action="/admin/messages/<%= m.id %>/reply"></form>
-  <tr style="<%= m.handled ? 'opacity:0.55;' : '' %>">
-    <td>
-      <form method="post" action="/admin/messages/<%= m.id %>/toggle-handled" class="inline">
-        <button type="submit" class="<%= m.handled ? '' : 'danger' %>"><%= m.handled ? '✔ טופל' : 'סמן כטופל' %></button>
-      </form>
-    </td>
-    <td><%= m.phone || '-' %></td>
-    <td><%= m.created_at %></td>
-    <td>
-      <% if (m.recording_path) { %>
-      <audio controls src="/admin/messages/<%= m.id %>/recording" style="height:32px;"></audio>
-      <a href="/admin/messages/<%= m.id %>/recording?download=1" style="margin-right:8px;">⬇ הורדה</a>
-      <% } else { %>אין הקלטה<% } %>
-    </td>
-    <td><%= m.email_sent ? 'כן' : 'לא' %></td>
-    <td>
-      <textarea name="reply_text" form="reply-<%= m.id %>" rows="2" style="width:100%; min-width:200px;" placeholder="כתוב תשובה ללקוח..."><%= m.reply_text || '' %></textarea>
-      <% if (m.reply_text) { %>
-      <div style="font-size:11px; color:#777;"><%= m.reply_heard ? 'נשמעה על ידי הלקוח' : 'ממתינה שהלקוח יתקשר וישמע' %></div>
-      <% } %>
-      <button type="submit" form="reply-<%= m.id %>">שמור תשובה</button>
-    </td>
-    <td>
-      <form method="post" action="/admin/messages/<%= m.id %>/delete" class="inline" onsubmit="return confirm('למחוק את ההודעה?')">
-        <button type="submit" class="danger">מחק</button>
-      </form>
-    </td>
-  </tr>
+<% if (threads.length === 0) { %>
+<p>אין הודעות</p>
+<% } %>
+
+<% threads.forEach(function(t) { %>
+<div class="card" style="<%= t.latest.handled ? 'opacity:0.6;' : '' %>">
+  <h3><%= t.phone || 'מספר לא ידוע' %></h3>
+
+  <% t.messages.forEach(function(m) { %>
+  <div style="border-top:1px solid #eee; padding:8px 0;">
+    <div style="font-size:12px; color:#777;"><%= m.created_at %></div>
+    <% if (m.recording_path) { %>
+    <audio controls src="/admin/messages/<%= m.id %>/recording" style="height:32px;"></audio>
+    <a href="/admin/messages/<%= m.id %>/recording?download=1" style="margin-right:8px;">⬇ הורדה</a>
+    <% } else { %><span>אין הקלטה</span><% } %>
+    <% if (m.reply_text) { %>
+    <div style="background:#eef1f6; border-radius:4px; padding:6px 10px; margin-top:6px;">
+      <strong>התשובה שלך:</strong> <%= m.reply_text %>
+      <span style="font-size:11px; color:#777;">(<%= m.reply_heard ? 'נשמעה על ידי הלקוח' : 'ממתינה שהלקוח יתקשר וישמע' %>)</span>
+    </div>
+    <% } %>
+  </div>
   <% }) %>
-</table>
+
+  <form method="post" action="/admin/messages/<%= t.latest.id %>/reply" style="margin-top:10px;">
+    <textarea name="reply_text" rows="2" style="width:100%;" placeholder="כתוב תשובה ללקוח..."><%= t.latest.reply_text || '' %></textarea>
+    <button type="submit">שמור תשובה</button>
+  </form>
+
+  <p style="margin-top:10px;">
+    <form method="post" action="/admin/messages/<%= t.latest.id %>/toggle-handled" class="inline">
+      <button type="submit" class="<%= t.latest.handled ? '' : 'danger' %>"><%= t.latest.handled ? '✔ טופל' : 'סמן כטופל' %></button>
+    </form>
+    <form method="post" action="/admin/messages/thread/<%= encodeURIComponent(t.phone) %>/delete" class="inline" onsubmit="return confirm('למחוק את כל השיחה הזו?')">
+      <button type="submit" class="danger">מחק שיחה</button>
+    </form>
+  </p>
+</div>
+<% }) %>
 
 <%- include('partials/footer') %>

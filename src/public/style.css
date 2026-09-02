@@ -17,12 +17,13 @@ header.topbar {
 header.topbar a { color: #fff; text-decoration: none; margin-left: 16px; }
 header.topbar a:hover { text-decoration: underline; }
 main { max-width: 1000px; margin: 20px auto; padding: 0 16px; }
-main.wide { max-width: 1500px; }
-td.actions-col { min-width: 260px; }
-td.actions-col form.inline { display: block; margin-bottom: 6px; }
+main.wide { max-width: 1600px; }
+td.actions-col { white-space: nowrap; }
+td.actions-col form.inline { display: inline-block; margin-left: 6px; }
+td.actions-col input, td.actions-col select, td.actions-col button { padding: 3px 6px; margin: 0; font-size: 12px; }
 h1 { font-size: 22px; }
 table { border-collapse: collapse; width: 100%; background: #fff; margin-bottom: 20px; }
-th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: right; }
+th, td { border: 1px solid #ddd; padding: 4px 8px; text-align: right; }
 th { background: #eef1f6; }
 form.inline { display: inline; }
 .card { background: #fff; padding: 16px; border-radius: 6px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
