@@ -149,7 +149,8 @@ function finalConfirm(sess, chosenItems, creditToApply) {
       creditToApply,
     },
   });
-  const lines = chosenItems.map((r) => `${r.bed_count} מיטות במקום ${r.location_name} לחג ${r.holiday_name}`);
+  // מתחילים במילה ולא בספרה - סגמן שמתחיל בספרה נשמע מעוות (מאומת בבדיקה חיה)
+  const lines = chosenItems.map((r) => `במקום ${r.location_name} לחג ${r.holiday_name} הזמנת ${r.bed_count} מיטות`);
   const summaryLines = ['סיכום ההזמנה', ...lines, `סך הכל ${chosenTotal} שקלים`];
   if (creditToApply > 0) {
     summaryLines.push(`מתוך זה ${creditToApply} שקלים יקוזזו מיתרת הזכות שלך`);

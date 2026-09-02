@@ -43,10 +43,12 @@ function buildMenuDirective(callId, customerId) {
   for (const g of byHoliday) {
     lines.push(`לגבי החג ${g.holiday_name} יש לך את ההזמנות הבאות`);
     for (const r of g.items) {
+      // מתחילים במילה ולא בספרה - סגמן שמתחיל בספרה נשמע מעוות (מאומת
+      // בבדיקה חיה: "1 מיטות במקום..." נשמע רע, כל שאר המשפטים תקינים)
       lines.push(
         r.status === 'paid'
-          ? `${r.bed_count} מיטות במקום ${r.location_name} שולם ${paymentMethodLabel(r.payment_method)}`
-          : `${r.bed_count} מיטות במקום ${r.location_name} טרם שולם`
+          ? `במקום ${r.location_name} יש לך הזמנה של ${r.bed_count} מיטות, שולם ${paymentMethodLabel(r.payment_method)}`
+          : `במקום ${r.location_name} יש לך הזמנה של ${r.bed_count} מיטות, טרם שולם`
       );
     }
   }
