@@ -310,13 +310,15 @@ router.get('/seasons/:id/edit', (req, res) => {
         `SELECT COALESCE(SUM(bed_count),0) AS n FROM reservations WHERE location_id = ? AND holiday_season_id = ? AND status != 'cancelled'`
       )
       .get(loc.id, season.id).n;
+    const totalBeds = cap ? cap.total_beds : 0;
     return {
       id: loc.id,
       name: loc.name,
       active: !!cap,
-      total_beds: cap ? cap.total_beds : 0,
+      total_beds: totalBeds,
       price_per_bed: cap ? cap.price_per_bed : 50,
       reserved_beds: reserved,
+      available_beds: totalBeds - reserved,
     };
   });
 
@@ -689,7 +691,7 @@ const RESERVATION_SEARCH_FIELDS = ['c.first_name', 'c.last_name', 'c.code', 'l.n
 
 function buildReservationsQuery({ seasonId, locationId, q }) {
   let query = `
-    SELECT r.*, c.first_name, c.last_name, c.code AS customer_code, l.name AS location_name, l.unit_type AS location_unit_type, h.name AS holiday_name, hs.year_label
+    SELECT r.*, c.first_name, c.last_name, c.code AS customer_code, c.phone AS customer_phone, l.name AS location_name, l.unit_type AS location_unit_type, h.name AS holiday_name, hs.year_label
     FROM reservations r
     JOIN customers c ON c.id = r.customer_id
     JOIN locations l ON l.id = r.location_id

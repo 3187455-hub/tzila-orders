@@ -12,7 +12,7 @@
 
     <h3>מקומות רלוונטים לחג זה</h3>
     <table>
-      <tr><th>רלוונטי?</th><th>מקום</th><th>סה"כ מיטות</th><th>מחיר למיטה</th><th>מיטות שנרשמו כבר</th></tr>
+      <tr><th>רלוונטי?</th><th>מקום</th><th>סה"כ מיטות</th><th>מחיר למיטה</th><th>מיטות שנרשמו כבר</th><th>יתרת מיטות</th></tr>
       <% locations.forEach(function(loc) { %>
       <tr>
         <td><input type="checkbox" name="loc_<%= loc.id %>_active" <%= loc.active ? 'checked' : '' %>></td>
@@ -20,6 +20,7 @@
         <td><input type="number" min="0" name="loc_<%= loc.id %>_total" value="<%= loc.total_beds || 0 %>" style="width:80px"></td>
         <td><input type="number" min="0" step="0.5" name="loc_<%= loc.id %>_price" value="<%= loc.price_per_bed || 50 %>" style="width:80px"></td>
         <td><%= loc.reserved_beds || 0 %></td>
+        <td><%= loc.available_beds %></td>
       </tr>
       <% }) %>
     </table>
