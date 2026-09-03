@@ -27,11 +27,12 @@
 
 <table>
   <tr>
-    <th>לקוח</th><th>חג</th><th>מקום</th><th>מיטות</th><th>יתרה במקום</th><th>מחיר למיטה</th><th>סה"כ</th><th>סטטוס</th><th>פעולות</th>
+    <th>לקוח</th><th>חג</th><th>מקום</th><th>מיטות</th><th>יתרה במקום</th><th>מחיר למיטה</th><th>סה"כ</th><th>סטטוס</th><th>הערות</th><th>פעולות</th>
   </tr>
   <% reservations.forEach(function(r) { %>
   <form id="count-<%= r.id %>" method="post" action="/admin/reservations/<%= r.id %>/count"></form>
   <form id="price-<%= r.id %>" method="post" action="/admin/reservations/<%= r.id %>/price"></form>
+  <form id="notes-<%= r.id %>" method="post" action="/admin/reservations/<%= r.id %>/notes"></form>
   <% var locEntry = (locationsBySeason[r.holiday_season_id] || []).find(function(l) { return l.location_id === r.location_id; }); %>
   <tr>
     <td><a href="/admin/customers/<%= r.customer_id %>"><%= r.first_name || '' %> <%= r.last_name || '' %></a> (<%= r.customer_code || r.customer_id %>)</td>
@@ -48,6 +49,10 @@
     </td>
     <td><%= r.bed_count * r.price_per_bed_snapshot %></td>
     <td class="<%= r.status === 'paid' ? 'badge-paid' : 'badge-pending' %>"><%= r.status === 'paid' ? 'שולם' : 'ממתין לתשלום' %></td>
+    <td>
+      <input type="text" name="notes" form="notes-<%= r.id %>" value="<%= r.notes || '' %>" placeholder="לדוגמה: כמה מיטות בחדר" style="width:120px">
+      <button type="submit" form="notes-<%= r.id %>">שמור</button>
+    </td>
     <td class="actions-col">
       <% if (r.status !== 'paid') { %>
       <form method="post" action="/admin/reservations/<%= r.id %>/mark-paid" class="inline">

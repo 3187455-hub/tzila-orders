@@ -797,27 +797,25 @@ router.post('/reservations/:id/price', (req, res) => {
   res.redirect(req.headers.referer || '/admin/reservations');
 });
 
+router.post('/reservations/:id/notes', (req, res) => {
+  db.prepare('UPDATE reservations SET notes = ? WHERE id = ?').run(
+    (req.body.notes || '').trim() || null,
+    req.params.id
+  );
+  res.redirect(req.headers.referer || '/admin/reservations');
+});
+
 router.post('/reservations/:id/count', (req, res) => {
   const reservation = db.prepare('SELECT * FROM reservations WHERE id = ?').get(req.params.id);
-  const location = db.prepare('SELECT * FROM locations WHERE id = ?').get(reservation.location_id);
   const newCount = parseInt(req.body.count, 10);
   if (!newCount || newCount <= 0) {
     return res.redirect(
       (req.headers.referer || '/admin/reservations') + `?flash=${encodeURIComponent('כמות לא תקינה')}`
     );
   }
-  // מקום מסוג "חדרים" - עדכון ידני מותר גם מעבר למלאי הרשום (המלאי
-  // מתייחס למיטה בודדת ולא בהכרח משקף חדר); מקום מסוג "מיטה נפרדת" -
-  // ממשיך להיות מוגבל למלאי הפנוי בפועל, כמו קודם.
-  if (location.unit_type !== 'room') {
-    const capacity = inventory.getCapacity(reservation.holiday_season_id, reservation.location_id);
-    const maxAllowed = (capacity ? capacity.available_beds : 0) + reservation.bed_count;
-    if (newCount > maxAllowed) {
-      return res.redirect(
-        (req.headers.referer || '/admin/reservations') + `?flash=${encodeURIComponent('כמות לא תקינה (מקסימום ' + maxAllowed + ')')}`
-      );
-    }
-  }
+  // עדכון ידני מהניהול תמיד מותר גם מעבר למלאי הרשום, בכל מקום - הגבלת
+  // המלאי חלה רק על מה שהלקוח בוחר בעצמו בטלפון (src/ivr/register.js,
+  // src/ivr/status.js), לא על עדכון ידני של הצוות.
   db.prepare(`UPDATE reservations SET bed_count = ?, updated_at = datetime('now') WHERE id = ?`).run(
     newCount,
     req.params.id

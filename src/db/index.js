@@ -67,4 +67,8 @@ if (!columnExists('locations', 'unit_type')) {
   db.exec("ALTER TABLE locations ADD COLUMN unit_type TEXT NOT NULL DEFAULT 'bed'");
 }
 
+if (!columnExists('reservations', 'notes')) {
+  db.exec('ALTER TABLE reservations ADD COLUMN notes TEXT');
+}
+
 module.exports = db;

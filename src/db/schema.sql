@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS reservations (
   price_per_bed_snapshot REAL NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending_payment', -- pending_payment | paid | cancelled
   payment_charge_id INTEGER REFERENCES payment_charges(id),
+  notes TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
