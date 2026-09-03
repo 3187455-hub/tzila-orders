@@ -689,7 +689,13 @@ router.get('/recording/:customerId', async (req, res) => {
 // ---------- הזמנות ----------
 const RESERVATION_SEARCH_FIELDS = ['c.first_name', 'c.last_name', 'c.code', 'l.name', 'h.name', 'hs.year_label'];
 
-function buildReservationsQuery({ seasonId, locationId, q }) {
+const RESERVATION_SORTS = {
+  name: 'c.last_name, c.first_name',
+  date_desc: 'r.created_at DESC',
+  date_asc: 'r.created_at ASC',
+};
+
+function buildReservationsQuery({ seasonId, locationId, q, sort }) {
   let query = `
     SELECT r.*, c.first_name, c.last_name, c.code AS customer_code, c.phone AS customer_phone, l.name AS location_name, l.unit_type AS location_unit_type, h.name AS holiday_name, hs.year_label
     FROM reservations r
@@ -716,7 +722,7 @@ function buildReservationsQuery({ seasonId, locationId, q }) {
       for (let i = 0; i < RESERVATION_SEARCH_FIELDS.length; i++) args.push(`%${w}%`);
     }
   }
-  query += ' ORDER BY c.last_name, c.first_name';
+  query += ' ORDER BY ' + (RESERVATION_SORTS[sort] || RESERVATION_SORTS.name);
   return { query, args };
 }
 
@@ -728,7 +734,7 @@ router.get('/reservations', (req, res) => {
     .all();
   const allLocations = db.prepare('SELECT * FROM locations ORDER BY sort_order, name').all();
 
-  const { query, args } = buildReservationsQuery({ seasonId: req.query.season_id, locationId: req.query.location_id, q: req.query.q });
+  const { query, args } = buildReservationsQuery({ seasonId: req.query.season_id, locationId: req.query.location_id, q: req.query.q, sort: req.query.sort });
   const reservations = db.prepare(query).all(...args);
 
   const locationsBySeason = {};
@@ -737,12 +743,12 @@ router.get('/reservations', (req, res) => {
   }
 
   res.render('reservations', {
-    reservations, seasons, allLocations, seasonId: req.query.season_id, locationId: req.query.location_id, q: req.query.q, flash: req.query.flash, locationsBySeason, wide: true,
+    reservations, seasons, allLocations, seasonId: req.query.season_id, locationId: req.query.location_id, q: req.query.q, sort: req.query.sort, flash: req.query.flash, locationsBySeason, wide: true,
   });
 });
 
 router.get('/reservations/export.csv', (req, res) => {
-  const { query, args } = buildReservationsQuery({ seasonId: req.query.season_id, locationId: req.query.location_id, q: req.query.q });
+  const { query, args } = buildReservationsQuery({ seasonId: req.query.season_id, locationId: req.query.location_id, q: req.query.q, sort: req.query.sort });
   const reservations = db.prepare(query).all(...args);
 
   const headers = ['קוד לקוח', 'שם פרטי', 'שם משפחה', 'חג', 'שנה', 'מקום', 'מיטות', 'מחיר למיטה', 'סה"כ', 'סטטוס'];

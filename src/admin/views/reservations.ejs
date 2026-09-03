@@ -19,15 +19,21 @@
       <option value="<%= loc.id %>" <%= String(loc.id) === String(locationId) ? 'selected' : '' %>><%= loc.name %></option>
       <% }) %>
     </select>
+    <label>מיון</label>
+    <select name="sort" onchange="this.form.submit()">
+      <option value="name" <%= (!sort || sort === 'name') ? 'selected' : '' %>>שם משפחה ואז שם פרטי</option>
+      <option value="date_desc" <%= sort === 'date_desc' ? 'selected' : '' %>>תאריך הזמנה - החדש קודם</option>
+      <option value="date_asc" <%= sort === 'date_asc' ? 'selected' : '' %>>תאריך הזמנה - הישן קודם</option>
+    </select>
     <input type="text" name="q" placeholder="חיפוש לפי לקוח, חג, מקום" value="<%= q || '' %>" style="width:240px;">
     <button type="submit">חפש</button>
-    <a href="/admin/reservations/export.csv?season_id=<%= seasonId || '' %>&location_id=<%= locationId || '' %>&q=<%= encodeURIComponent(q || '') %>" style="margin-right:12px;">⬇ ייצוא לאקסל (לפי הסינון הנוכחי)</a>
+    <a href="/admin/reservations/export.csv?season_id=<%= seasonId || '' %>&location_id=<%= locationId || '' %>&sort=<%= sort || '' %>&q=<%= encodeURIComponent(q || '') %>" style="margin-right:12px;">⬇ ייצוא לאקסל (לפי הסינון הנוכחי)</a>
   </form>
 </div>
 
 <table>
   <tr>
-    <th>לקוח</th><th>טלפון</th><th>חג</th><th>מקום</th><th>מיטות</th><th>יתרה במקום</th><th>מחיר למיטה</th><th>סה"כ</th><th>סטטוס</th><th>הערות</th><th>פעולות</th>
+    <th>לקוח</th><th>טלפון</th><th>תאריך הזמנה</th><th>חג</th><th>מקום</th><th>מיטות</th><th>יתרה במקום</th><th>מחיר למיטה</th><th>סה"כ</th><th>סטטוס</th><th>הערות</th><th>פעולות</th>
   </tr>
   <% reservations.forEach(function(r) { %>
   <form id="count-<%= r.id %>" method="post" action="/admin/reservations/<%= r.id %>/count"></form>
@@ -37,6 +43,7 @@
   <tr>
     <td><a href="/admin/customers/<%= r.customer_id %>"><%= r.first_name || '' %> <%= r.last_name || '' %></a> (<%= r.customer_code || r.customer_id %>)</td>
     <td><%= r.customer_phone || '' %></td>
+    <td><%= r.created_at %></td>
     <td><%= r.holiday_name %> <%= r.year_label %></td>
     <td><%= r.location_name %><% if (r.location_unit_type === 'room') { %> (חדרים)<% } %></td>
     <td>
