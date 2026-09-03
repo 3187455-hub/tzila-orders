@@ -3,6 +3,7 @@ const path = require('path');
 const session = require('express-session');
 const config = require('./config');
 
+const ivrMain = require('./ivr/main');
 const ivrRegister = require('./ivr/register');
 const ivrStatus = require('./ivr/status');
 const ivrDonate = require('./ivr/donate');
@@ -59,6 +60,7 @@ app.get('/ivr/diag', (req, res) => {
   return res.send('read=t-Press one=TESTKEY,no,1,1,15,Digits,yes,no,,');
 });
 
+app.get('/ivr/main', verifyYemot, ivrMain.handle);
 app.get('/ivr/register', verifyYemot, ivrRegister.handle);
 app.get('/ivr/status', verifyYemot, ivrStatus.handle);
 app.get('/ivr/donate', verifyYemot, ivrDonate.handle);
