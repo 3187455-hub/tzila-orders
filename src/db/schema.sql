@@ -39,7 +39,8 @@ CREATE TABLE IF NOT EXISTS holiday_seasons (
 CREATE TABLE IF NOT EXISTS locations (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL UNIQUE,
-  sort_order INTEGER NOT NULL DEFAULT 0
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  unit_type TEXT NOT NULL DEFAULT 'bed' -- bed (מיטה נפרדת) | room (חדרים)
 );
 
 CREATE TABLE IF NOT EXISTS location_capacities (

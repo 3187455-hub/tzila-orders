@@ -12,27 +12,36 @@
       <option value="<%= s.id %>" <%= String(s.id) === String(seasonId) ? 'selected' : '' %>><%= s.holiday_name %> - <%= s.year_label %></option>
       <% }) %>
     </select>
+    <label>סינון לפי מקום</label>
+    <select name="location_id" onchange="this.form.submit()">
+      <option value="">הכל</option>
+      <% allLocations.forEach(function(loc) { %>
+      <option value="<%= loc.id %>" <%= String(loc.id) === String(locationId) ? 'selected' : '' %>><%= loc.name %></option>
+      <% }) %>
+    </select>
     <input type="text" name="q" placeholder="חיפוש לפי לקוח, חג, מקום" value="<%= q || '' %>" style="width:240px;">
     <button type="submit">חפש</button>
-    <a href="/admin/reservations/export.csv?season_id=<%= seasonId || '' %>&q=<%= encodeURIComponent(q || '') %>" style="margin-right:12px;">⬇ ייצוא לאקסל (לפי הסינון הנוכחי)</a>
+    <a href="/admin/reservations/export.csv?season_id=<%= seasonId || '' %>&location_id=<%= locationId || '' %>&q=<%= encodeURIComponent(q || '') %>" style="margin-right:12px;">⬇ ייצוא לאקסל (לפי הסינון הנוכחי)</a>
   </form>
 </div>
 
 <table>
   <tr>
-    <th>לקוח</th><th>חג</th><th>מקום</th><th>מיטות</th><th>מחיר למיטה</th><th>סה"כ</th><th>סטטוס</th><th>פעולות</th>
+    <th>לקוח</th><th>חג</th><th>מקום</th><th>מיטות</th><th>יתרה במקום</th><th>מחיר למיטה</th><th>סה"כ</th><th>סטטוס</th><th>פעולות</th>
   </tr>
   <% reservations.forEach(function(r) { %>
   <form id="count-<%= r.id %>" method="post" action="/admin/reservations/<%= r.id %>/count"></form>
   <form id="price-<%= r.id %>" method="post" action="/admin/reservations/<%= r.id %>/price"></form>
+  <% var locEntry = (locationsBySeason[r.holiday_season_id] || []).find(function(l) { return l.location_id === r.location_id; }); %>
   <tr>
     <td><a href="/admin/customers/<%= r.customer_id %>"><%= r.first_name || '' %> <%= r.last_name || '' %></a> (<%= r.customer_code || r.customer_id %>)</td>
     <td><%= r.holiday_name %> <%= r.year_label %></td>
-    <td><%= r.location_name %></td>
+    <td><%= r.location_name %><% if (r.location_unit_type === 'room') { %> (חדרים)<% } %></td>
     <td>
       <input type="number" min="1" name="count" form="count-<%= r.id %>" value="<%= r.bed_count %>" style="width:60px">
       <button type="submit" form="count-<%= r.id %>">עדכן</button>
     </td>
+    <td><%= locEntry ? locEntry.available_beds : '-' %></td>
     <td>
       <input type="number" step="0.5" name="price" form="price-<%= r.id %>" value="<%= r.price_per_bed_snapshot %>" style="width:70px">
       <button type="submit" form="price-<%= r.id %>">עדכן</button>

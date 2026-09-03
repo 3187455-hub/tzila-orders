@@ -63,4 +63,8 @@ if (!columnExists('messages', 'thread_id')) {
   db.exec('UPDATE messages SET thread_id = id WHERE thread_id IS NULL');
 }
 
+if (!columnExists('locations', 'unit_type')) {
+  db.exec("ALTER TABLE locations ADD COLUMN unit_type TEXT NOT NULL DEFAULT 'bed'");
+}
+
 module.exports = db;

@@ -6,13 +6,19 @@
 <div class="card">
   <p>מספר הסדר קובע גם את סדר ההצגה כאן וגם את הסדר שבו המקומות מוקראים בטלפון.</p>
   <table>
-    <tr><th>סדר</th><th>שם המקום</th><th>פעולות</th></tr>
+    <tr><th>סדר</th><th>שם המקום</th><th>סוג</th><th>פעולות</th></tr>
     <% locations.forEach(function(loc) { %>
     <form id="rename-<%= loc.id %>" method="post" action="/admin/locations/<%= loc.id %>/rename"></form>
     <form id="delete-<%= loc.id %>" method="post" action="/admin/locations/<%= loc.id %>/delete" onsubmit="return confirm('למחוק את המקום?')"></form>
     <tr>
       <td><input type="number" name="sort_order" form="rename-<%= loc.id %>" value="<%= loc.sort_order %>" style="width:60px"></td>
       <td><input type="text" name="name" form="rename-<%= loc.id %>" value="<%= loc.name %>"></td>
+      <td>
+        <select name="unit_type" form="rename-<%= loc.id %>">
+          <option value="bed" <%= loc.unit_type === 'bed' ? 'selected' : '' %>>מיטה נפרדת</option>
+          <option value="room" <%= loc.unit_type === 'room' ? 'selected' : '' %>>חדרים</option>
+        </select>
+      </td>
       <td>
         <button type="submit" form="rename-<%= loc.id %>">שמור</button>
         <button type="submit" form="delete-<%= loc.id %>" class="danger">מחק</button>
@@ -24,9 +30,18 @@
   <h3>הוספת מקום חדש</h3>
   <form method="post" action="/admin/locations">
     <input type="text" name="name" placeholder="שם המקום" required>
+    <select name="unit_type">
+      <option value="bed">מיטה נפרדת</option>
+      <option value="room">חדרים</option>
+    </select>
     <button type="submit">הוסף</button>
   </form>
 </div>
+
+<p style="font-size:12px; color:#777;">
+  "מיטה נפרדת" - הכמות שמוזמנת מוגבלת תמיד למלאי הפנוי בפועל.
+  "חדרים" - בדף ההזמנות ניתן לעדכן ידנית את כמות המיטות גם מעבר למלאי הרשום (לשימוש כשההזמנה היא לפי חדר ולא לפי מיטה בודדת).
+</p>
 
 <p>להגדרת כמות מיטות לכל מקום עבור חג מסוים - היכנס לעמוד <a href="/admin/holidays">ניהול חגים</a> ובחר מחזור.</p>
 

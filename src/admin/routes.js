@@ -198,10 +198,11 @@ router.get('/locations', (req, res) => {
 
 router.post('/locations', (req, res) => {
   const name = (req.body.name || '').trim();
+  const unitType = req.body.unit_type === 'room' ? 'room' : 'bed';
   if (name) {
     const maxOrder = db.prepare('SELECT MAX(sort_order) AS m FROM locations').get().m || 0;
     try {
-      db.prepare('INSERT INTO locations (name, sort_order) VALUES (?, ?)').run(name, maxOrder + 1);
+      db.prepare('INSERT INTO locations (name, sort_order, unit_type) VALUES (?, ?, ?)').run(name, maxOrder + 1, unitType);
     } catch (e) {
       return res.redirect('/admin/locations?flash=' + encodeURIComponent('שם זה כבר קיים'));
     }
@@ -210,9 +211,11 @@ router.post('/locations', (req, res) => {
 });
 
 router.post('/locations/:id/rename', (req, res) => {
-  db.prepare('UPDATE locations SET name = ?, sort_order = ? WHERE id = ?').run(
+  const unitType = req.body.unit_type === 'room' ? 'room' : 'bed';
+  db.prepare('UPDATE locations SET name = ?, sort_order = ?, unit_type = ? WHERE id = ?').run(
     req.body.name,
     parseInt(req.body.sort_order, 10) || 0,
+    unitType,
     req.params.id
   );
   res.redirect('/admin/locations');
@@ -684,9 +687,9 @@ router.get('/recording/:customerId', async (req, res) => {
 // ---------- הזמנות ----------
 const RESERVATION_SEARCH_FIELDS = ['c.first_name', 'c.last_name', 'c.code', 'l.name', 'h.name', 'hs.year_label'];
 
-function buildReservationsQuery({ seasonId, q }) {
+function buildReservationsQuery({ seasonId, locationId, q }) {
   let query = `
-    SELECT r.*, c.first_name, c.last_name, c.code AS customer_code, l.name AS location_name, h.name AS holiday_name, hs.year_label
+    SELECT r.*, c.first_name, c.last_name, c.code AS customer_code, l.name AS location_name, l.unit_type AS location_unit_type, h.name AS holiday_name, hs.year_label
     FROM reservations r
     JOIN customers c ON c.id = r.customer_id
     JOIN locations l ON l.id = r.location_id
@@ -699,6 +702,10 @@ function buildReservationsQuery({ seasonId, q }) {
     query += ' AND r.holiday_season_id = ?';
     args.push(seasonId);
   }
+  if (locationId) {
+    query += ' AND r.location_id = ?';
+    args.push(locationId);
+  }
   if (q) {
     // כל מילה בחיפוש צריכה להימצא באיזשהו שדה - כמו בחיפוש לקוחות
     const words = q.trim().split(/\s+/).filter(Boolean);
@@ -707,7 +714,7 @@ function buildReservationsQuery({ seasonId, q }) {
       for (let i = 0; i < RESERVATION_SEARCH_FIELDS.length; i++) args.push(`%${w}%`);
     }
   }
-  query += ' ORDER BY r.created_at DESC';
+  query += ' ORDER BY c.last_name, c.first_name';
   return { query, args };
 }
 
@@ -717,8 +724,9 @@ router.get('/reservations', (req, res) => {
       `SELECT hs.*, h.name AS holiday_name FROM holiday_seasons hs JOIN holidays h ON h.id = hs.holiday_id ORDER BY hs.id DESC`
     )
     .all();
+  const allLocations = db.prepare('SELECT * FROM locations ORDER BY sort_order, name').all();
 
-  const { query, args } = buildReservationsQuery({ seasonId: req.query.season_id, q: req.query.q });
+  const { query, args } = buildReservationsQuery({ seasonId: req.query.season_id, locationId: req.query.location_id, q: req.query.q });
   const reservations = db.prepare(query).all(...args);
 
   const locationsBySeason = {};
@@ -727,12 +735,12 @@ router.get('/reservations', (req, res) => {
   }
 
   res.render('reservations', {
-    reservations, seasons, seasonId: req.query.season_id, q: req.query.q, flash: req.query.flash, locationsBySeason, wide: true,
+    reservations, seasons, allLocations, seasonId: req.query.season_id, locationId: req.query.location_id, q: req.query.q, flash: req.query.flash, locationsBySeason, wide: true,
   });
 });
 
 router.get('/reservations/export.csv', (req, res) => {
-  const { query, args } = buildReservationsQuery({ seasonId: req.query.season_id, q: req.query.q });
+  const { query, args } = buildReservationsQuery({ seasonId: req.query.season_id, locationId: req.query.location_id, q: req.query.q });
   const reservations = db.prepare(query).all(...args);
 
   const headers = ['קוד לקוח', 'שם פרטי', 'שם משפחה', 'חג', 'שנה', 'מקום', 'מיטות', 'מחיר למיטה', 'סה"כ', 'סטטוס'];
@@ -791,13 +799,24 @@ router.post('/reservations/:id/price', (req, res) => {
 
 router.post('/reservations/:id/count', (req, res) => {
   const reservation = db.prepare('SELECT * FROM reservations WHERE id = ?').get(req.params.id);
-  const capacity = inventory.getCapacity(reservation.holiday_season_id, reservation.location_id);
-  const maxAllowed = (capacity ? capacity.available_beds : 0) + reservation.bed_count;
+  const location = db.prepare('SELECT * FROM locations WHERE id = ?').get(reservation.location_id);
   const newCount = parseInt(req.body.count, 10);
-  if (!newCount || newCount <= 0 || newCount > maxAllowed) {
+  if (!newCount || newCount <= 0) {
     return res.redirect(
-      (req.headers.referer || '/admin/reservations') + `?flash=${encodeURIComponent('כמות לא תקינה (מקסימום ' + maxAllowed + ')')}`
+      (req.headers.referer || '/admin/reservations') + `?flash=${encodeURIComponent('כמות לא תקינה')}`
     );
+  }
+  // מקום מסוג "חדרים" - עדכון ידני מותר גם מעבר למלאי הרשום (המלאי
+  // מתייחס למיטה בודדת ולא בהכרח משקף חדר); מקום מסוג "מיטה נפרדת" -
+  // ממשיך להיות מוגבל למלאי הפנוי בפועל, כמו קודם.
+  if (location.unit_type !== 'room') {
+    const capacity = inventory.getCapacity(reservation.holiday_season_id, reservation.location_id);
+    const maxAllowed = (capacity ? capacity.available_beds : 0) + reservation.bed_count;
+    if (newCount > maxAllowed) {
+      return res.redirect(
+        (req.headers.referer || '/admin/reservations') + `?flash=${encodeURIComponent('כמות לא תקינה (מקסימום ' + maxAllowed + ')')}`
+      );
+    }
   }
   db.prepare(`UPDATE reservations SET bed_count = ?, updated_at = datetime('now') WHERE id = ?`).run(
     newCount,
