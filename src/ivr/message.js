@@ -7,6 +7,19 @@ const mail = require('../mail');
 const { sayText, readDigits, recordMessage, combine, hangupNow } = require('./directives');
 const { last } = require('./params');
 
+// מבקש הקלטה חדשה - עם שם פרמטר ייחודי (חד-פעמי אמיתי, לא מונה
+// שמתאפס) לכל ניסיון הקלטה. נצפה בבדיקה חיה: ימות המשיח "זוכר" תשובה
+// שכבר ניתנה לשם פרמטר מסוים לאורך כל ה-ApiCallId האמיתי אצלו - גם אם
+// הסשן שלנו כאן התאפס/נוצר מחדש (אושר: אותו קובץ הקלטה חזר פעמיים
+// ברצף בלי שהמתקשר קיבל הזדמנות לדבר, כי שני ניסיונות ביקשו את אותו
+// שם פרמטר "MESSAGE_REC"). מונה שמתאפס עם הסשן שלנו לא מספיק בטוח -
+// משתמשים בחותמת זמן כדי להבטיח שם שלא נעשה בו שימוש חוזר אף פעם.
+function startRecording(sess) {
+  const paramName = `MESSAGE_REC_${Date.now()}`;
+  session.updateSession(sess.call_id, { step: 'recording', data: { recordParam: paramName } });
+  return combine(recordMessage(['אנא השאר את הודעתך אחרי הצליל', 'ולסיום ההקלטה שלך הקש סולמית'], paramName));
+}
+
 async function handle(req, res) {
   const params = req.query;
   const p = (name) => last(params, name);
@@ -27,10 +40,8 @@ async function handle(req, res) {
           : null;
 
         if (!latestForPhone) {
-          session.updateSession(callId, { step: 'recording', data: { threadId: null } });
-          return res.send(
-            combine(recordMessage(['אנא השאר את הודעתך אחרי הצליל', 'ולסיום ההקלטה שלך הקש סולמית'], 'MESSAGE_REC'))
-          );
+          session.updateSession(callId, { data: { threadId: null } });
+          return res.send(startRecording(session.getSession(callId)));
         }
 
         const hasPendingReply = !!(latestForPhone.reply_text && !latestForPhone.reply_heard);
@@ -53,17 +64,12 @@ async function handle(req, res) {
 
       case 'choose_continue': {
         const continueThread = p('CONTINUE_CHOICE') !== '2';
-        session.updateSession(callId, {
-          step: 'recording',
-          data: { threadId: continueThread ? sess.data.threadId : null },
-        });
-        return res.send(
-          combine(recordMessage(['אנא השאר את הודעתך אחרי הצליל', 'ולסיום ההקלטה שלך הקש סולמית'], 'MESSAGE_REC'))
-        );
+        session.updateSession(callId, { data: { threadId: continueThread ? sess.data.threadId : null } });
+        return res.send(startRecording(session.getSession(callId)));
       }
 
       case 'recording': {
-        const recordingPath = p('MESSAGE_REC');
+        const recordingPath = p(sess.data.recordParam);
         const result = db
           .prepare('INSERT INTO messages (phone, recording_path) VALUES (?, ?)')
           .run(phone || null, recordingPath || null);
