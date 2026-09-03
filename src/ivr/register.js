@@ -238,12 +238,6 @@ async function handle(req, res) {
         const idx = parseInt(p('LOC_NUM'), 10) - 1;
         const locationId = (sess.data.currentLocations || [])[idx];
         const capacity = locationId ? inventory.getCapacity(seasonId, locationId) : null;
-        // אבחון זמני - חקירת דיווח על אי-התאמה בין יתרת המקומות שהוקראה
-        // לבין הכמות שאושרה לבחירה בפועל (קאראוואן חיצוני, יום כיפור)
-        console.log(
-          'DIAG choose_location',
-          JSON.stringify({ seasonId, LOC_NUM: p('LOC_NUM'), idx, currentLocations: sess.data.currentLocations, locationId, capacity, allForSeason: inventory.locationsForSeason(seasonId) })
-        );
         if (!capacity || capacity.available_beds <= 0) {
           const { directive, empty } = locationListDirective(seasonId, sess);
           if (empty) return res.send(combine(sayText('אין כרגע מקומות פנויים לחג זה'), holidayMenuDirective(sess)));
@@ -261,10 +255,6 @@ async function handle(req, res) {
         const locationId = sess.data.currentLocationId;
         const bedCount = parseInt(p('BED_COUNT'), 10);
         const capacity = inventory.getCapacity(seasonId, locationId);
-        console.log(
-          'DIAG ask_bed_count',
-          JSON.stringify({ seasonId, locationId, BED_COUNT: p('BED_COUNT'), bedCount, capacity })
-        );
         if (!bedCount || bedCount <= 0 || bedCount > capacity.available_beds) {
           return res.send(combine(sayText('הכמות שהקשת אינה במסגרת התקינה'), askBedCountDirective(capacity.available_beds)));
         }
@@ -277,10 +267,6 @@ async function handle(req, res) {
         const locationId = sess.data.currentLocationId;
         const capacity = inventory.getCapacity(seasonId, locationId);
         if (p('CONFIRM_COUNT') === '1') {
-          console.log(
-            'DIAG confirm_count upsert',
-            JSON.stringify({ customerId: sess.customer_id, seasonId, locationId, bedCount: sess.data.pendingBedCount })
-          );
           const reservation = inventory.upsertReservation({
             customerId: sess.customer_id,
             holidaySeasonId: seasonId,
@@ -288,7 +274,6 @@ async function handle(req, res) {
             bedCount: sess.data.pendingBedCount,
             pricePerBed: capacity.price_per_bed,
           });
-          console.log('DIAG confirm_count result', JSON.stringify(reservation));
           const newIds = new Set(sess.data.newReservationIds || []);
           if (reservation) newIds.add(reservation.id);
           session.updateSession(callId, { step: 'after_location', data: { newReservationIds: [...newIds] } });
