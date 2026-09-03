@@ -10,6 +10,7 @@ const callLog = require('../ivr/callLog');
 const credit = require('../billing/credit');
 const { applyAvailableCreditToPending } = require('../billing/finalize');
 const settings = require('../settings');
+const tzintuk = require('../tzintuk');
 
 const router = express.Router();
 
@@ -136,7 +137,11 @@ router.get('/messages', (req, res) => {
     latest: msgs[msgs.length - 1],
   }));
   threads.sort((a, b) => (a.latest.handled === b.latest.handled ? b.latest.id - a.latest.id : a.latest.handled - b.latest.handled));
-  res.render('messages', { threads, flash: req.query.flash });
+
+  const requestedId = req.query.thread ? parseInt(req.query.thread, 10) : null;
+  const selected = (requestedId && threads.find((t) => t.threadId === requestedId)) || threads[0] || null;
+
+  res.render('messages', { threads, selected, flash: req.query.flash, wide: true });
 });
 
 router.post('/messages/thread/:threadId/delete', (req, res) => {
@@ -148,6 +153,12 @@ router.post('/messages/:id/reply', (req, res) => {
   const replyText = (req.body.reply_text || '').trim();
   // reply_heard=0 - התשובה החדשה עוד לא נשמעה, תושמע ללקוח בשיחה הבאה שלו
   db.prepare('UPDATE messages SET reply_text = ?, reply_heard = 0 WHERE id = ?').run(replyText || null, req.params.id);
+  if (replyText) {
+    const message = db.prepare('SELECT phone FROM messages WHERE id = ?').get(req.params.id);
+    if (message && message.phone) {
+      tzintuk.sendTzintuk(message.phone).catch((e) => console.error('sendTzintuk failed', e));
+    }
+  }
   res.redirect('/admin/messages');
 });
 
