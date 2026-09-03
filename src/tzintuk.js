@@ -8,6 +8,8 @@
 // היא אותו דומיין ותחילית /ym/api/ שכל שאר קריאות ה-API שלנו כבר
 // משתמשות בהן (DownloadFile/UploadTextFile וכו') - קיבלנו משם תגובת
 // שגיאה תקינה על טוקן חסר (לא שגיאת רשת), שמאשרת שה-endpoint קיים שם.
+const config = require('./config');
+
 const BASE = 'https://www.call2all.co.il/ym/api';
 
 async function sendTzintuk(phone) {
