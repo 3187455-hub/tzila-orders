@@ -829,13 +829,7 @@ router.post('/reservations/:id/location', (req, res) => {
   if (!reservation || !newLocationId || newLocationId === reservation.location_id) {
     return res.redirect(req.headers.referer || '/admin/reservations');
   }
-  const targetCapacity = inventory.getCapacity(reservation.holiday_season_id, newLocationId);
-  if (!targetCapacity || targetCapacity.available_beds < reservation.bed_count) {
-    return res.redirect(
-      (req.headers.referer || '/admin/reservations') +
-        `?flash=${encodeURIComponent('אין מספיק מקום פנוי במקום החדש (נותרו ' + (targetCapacity ? targetCapacity.available_beds : 0) + ')')}`
-    );
-  }
+  // עדכון ידני - כמו עדכון כמות, מותר גם מעבר למלאי הרשום במקום החדש
   db.prepare(`UPDATE reservations SET location_id = ?, updated_at = datetime('now') WHERE id = ?`).run(
     newLocationId,
     req.params.id
@@ -904,13 +898,9 @@ router.post('/customers/:id/reservations', (req, res) => {
   if (!capacity || !bedCount || bedCount <= 0) {
     return res.redirect(`/admin/customers/${customerId}?flash=${encodeURIComponent('נא לבחור חג/מקום וכמות תקינה')}`);
   }
-  const available = inventory.getCapacity(capacity.holiday_season_id, capacity.location_id);
-  if (bedCount > (available ? available.available_beds : 0)) {
-    return res.redirect(
-      `/admin/customers/${customerId}?flash=${encodeURIComponent('אין מספיק מקום פנוי (נותרו ' + (available ? available.available_beds : 0) + ')')}`
-    );
-  }
-
+  // הוספה/עדכון ידני מכרטיס הלקוח - כמו עדכון הכמות בדף ההזמנות, מותר
+  // תמיד גם מעבר למלאי הרשום; הגבלת המלאי חלה רק על מה שהלקוח בוחר
+  // בעצמו בטלפון (src/ivr/register.js).
   const price = parseFloat(req.body.price) || capacity.price_per_bed;
   const reservation = inventory.upsertReservation({
     customerId,
