@@ -2,6 +2,7 @@ const session = require('./session');
 const customers = require('./customers');
 const db = require('../db');
 const nedarim = require('../billing/nedarim');
+const messageNotice = require('./messageNotice');
 const { sayText, readDigits, combine, hangupNow } = require('./directives');
 const { last } = require('./params');
 
@@ -15,10 +16,11 @@ async function handle(req, res) {
   try {
     switch (sess.step) {
       case 'start': {
+        const notice = messageNotice.pendingNotice(phone);
         let customer = customers.findByPhone(phone);
         if (!customer) customer = customers.createMinimal({ phone });
         session.updateSession(callId, { step: 'ask_amount', customerId: customer.id });
-        return res.send(readDigits('כמה שקלים ברצונך לתרום היום', 'AMOUNT', { max: 5 }));
+        return res.send(combine(notice, readDigits('כמה שקלים ברצונך לתרום היום', 'AMOUNT', { max: 5 })));
       }
 
       case 'ask_amount': {

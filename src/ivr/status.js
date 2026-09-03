@@ -5,6 +5,7 @@ const db = require('../db');
 const nedarim = require('../billing/nedarim');
 const credit = require('../billing/credit');
 const { finalizeReservationCharge } = require('../billing/finalize');
+const messageNotice = require('./messageNotice');
 const { sayText, readDigits, combine, hangupNow } = require('./directives');
 const { last } = require('./params');
 
@@ -123,13 +124,14 @@ async function handle(req, res) {
   try {
     switch (sess.step) {
       case 'start': {
+        const notice = messageNotice.pendingNotice(phone);
         const customer = customers.findByPhone(phone);
         if (!customer) {
           session.updateSession(callId, { step: 'done' });
-          return res.send(combine(sayText('לא זיהינו את מספר הטלפון הזה במערכת, תודה רבה'), hangupNow()));
+          return res.send(combine(notice, sayText('לא זיהינו את מספר הטלפון הזה במערכת, תודה רבה'), hangupNow()));
         }
         session.updateSession(callId, { customerId: customer.id });
-        return res.send(buildMenuDirective(callId, customer.id));
+        return res.send(combine(notice, buildMenuDirective(callId, customer.id)));
       }
 
       case 'menu': {

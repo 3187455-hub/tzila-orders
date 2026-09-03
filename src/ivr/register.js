@@ -4,6 +4,7 @@ const inventory = require('./inventory');
 const nedarim = require('../billing/nedarim');
 const credit = require('../billing/credit');
 const settings = require('../settings');
+const messageNotice = require('./messageNotice');
 const { finalizeReservationCharge } = require('../billing/finalize');
 const {
   sayText,
@@ -175,24 +176,26 @@ async function handle(req, res) {
         // ממש בתחילת השיחה, לא כשחוזרים לבחור עוד מקום/חג באותה שיחה
         const welcomeText = settings.get('register_welcome_message', '');
         const welcome = welcomeText ? sayText(welcomeText) : null;
+        const notice = messageNotice.pendingNotice(phone);
 
         const customer = customers.findByPhone(phone);
         if (customer && customer.blocked) {
           session.updateSession(callId, { step: 'done', customerId: customer.id });
-          return res.send(combine(welcome, sayText('לא ניתן לבצע הרשמה בשלב זה, אנא פנה למזכירות'), hangupNow()));
+          return res.send(combine(notice, welcome, sayText('לא ניתן לבצע הרשמה בשלב זה, אנא פנה למזכירות'), hangupNow()));
         }
         if (customer) {
           const data = startHolidayQueue(customer.id);
           if (data.holidayQueue.length === 0) {
             session.updateSession(callId, { step: 'done', customerId: customer.id });
-            return res.send(combine(welcome, sayText('אין כרגע הרשמה פתוחה לאף חג תודה'), hangupNow()));
+            return res.send(combine(notice, welcome, sayText('אין כרגע הרשמה פתוחה לאף חג תודה'), hangupNow()));
           }
           session.updateSession(callId, { step: 'holiday_menu', customerId: customer.id, data });
-          return res.send(combine(welcome, firstHolidayMenuDirective(session.getSession(callId))));
+          return res.send(combine(notice, welcome, firstHolidayMenuDirective(session.getSession(callId))));
         }
         session.updateSession(callId, { step: 'record_name' });
         return res.send(
           combine(
+            notice,
             welcome,
             recordMessage(
               ['לא זיהינו את מספרך', 'אנא הקלט את שמך המלא ולאחריו הקש סולמית'],
