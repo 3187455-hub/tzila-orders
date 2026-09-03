@@ -17,38 +17,38 @@ async function handle(req, res) {
   try {
     switch (sess.step) {
       case 'start': {
-        // צ'אט פנימי: אם יש תשובת מנהל שטרם נשמעה למספר הזה - משמיעים
-        // אותה קודם, ואז שואלים אם להמשיך את אותה שיחה או לפתוח שיחה
-        // חדשה שלא קשורה. אם אין תשובה ממתינה - פשוט מקליטים הודעה
-        // חדשה (שיחה חדשה) בלי לשאול כלום.
-        const pendingReply = phone
-          ? db
-              .prepare(
-                'SELECT * FROM messages WHERE phone = ? AND reply_text IS NOT NULL AND reply_heard = 0 ORDER BY id DESC LIMIT 1'
-              )
-              .get(phone)
+        // צ'אט פנימי: אם יש היסטוריה קודמת למספר הזה (בין אם יש תשובה
+        // ממתינה ובין אם לא, ובין אם התשובה כבר נשמעה בעבר) - תמיד
+        // שואלים אם להמשיך את השיחה הקודמת או לפתוח שיחה חדשה שלא
+        // קשורה. רק למתקשר בפעם הראשונה אי-פעם (אין שום הודעה קודמת
+        // למספר שלו) אין מה להמשיך - מקליטים ישר.
+        const latestForPhone = phone
+          ? db.prepare('SELECT * FROM messages WHERE phone = ? ORDER BY id DESC LIMIT 1').get(phone)
           : null;
-        if (pendingReply) {
-          db.prepare('UPDATE messages SET reply_heard = 1 WHERE id = ?').run(pendingReply.id);
-          session.updateSession(callId, {
-            step: 'choose_continue',
-            data: { threadId: pendingReply.thread_id || pendingReply.id },
-          });
+
+        if (!latestForPhone) {
+          session.updateSession(callId, { step: 'recording', data: { threadId: null } });
           return res.send(
-            combine(
-              sayText(['יש לך תשובה חדשה', pendingReply.reply_text]),
-              readDigits(
-                ['להמשיך את אותה שיחה הקש 1', 'לפתוח שיחה חדשה שלא קשורה הקש 2'],
-                'CONTINUE_CHOICE',
-                { max: 1 }
-              )
-            )
+            combine(recordMessage(['אנא השאר את הודעתך אחרי הצליל', 'ולסיום ההקלטה שלך הקש סולמית'], 'MESSAGE_REC'))
           );
         }
-        session.updateSession(callId, { step: 'recording', data: { threadId: null } });
-        return res.send(
-          combine(recordMessage(['אנא השאר את הודעתך אחרי הצליל', 'ולסיום ההקלטה שלך הקש סולמית'], 'MESSAGE_REC'))
-        );
+
+        const hasPendingReply = !!(latestForPhone.reply_text && !latestForPhone.reply_heard);
+        if (hasPendingReply) {
+          db.prepare('UPDATE messages SET reply_heard = 1 WHERE id = ?').run(latestForPhone.id);
+        }
+        session.updateSession(callId, {
+          step: 'choose_continue',
+          data: { threadId: latestForPhone.thread_id || latestForPhone.id },
+        });
+        const lines = [];
+        if (hasPendingReply) {
+          lines.push('יש לך תשובה חדשה');
+          lines.push(latestForPhone.reply_text);
+        }
+        lines.push('להמשיך את השיחה הקודמת שלך הקש 1');
+        lines.push('לפתוח שיחה חדשה שלא קשורה הקש 2');
+        return res.send(readDigits(lines, 'CONTINUE_CHOICE', { max: 1 }));
       }
 
       case 'choose_continue': {
