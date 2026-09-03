@@ -4,7 +4,7 @@ const session = require('./session');
 const db = require('../db');
 const config = require('../config');
 const mail = require('../mail');
-const { sayText, recordMessage, combine, hangupNow } = require('./directives');
+const { sayText, readDigits, recordMessage, combine, hangupNow } = require('./directives');
 const { last } = require('./params');
 
 async function handle(req, res) {
@@ -18,7 +18,9 @@ async function handle(req, res) {
     switch (sess.step) {
       case 'start': {
         // צ'אט פנימי: אם יש תשובת מנהל שטרם נשמעה למספר הזה - משמיעים
-        // אותה קודם, ואז ממשיכים לקליטת הודעה חדשה/המשך מהמתקשר
+        // אותה קודם, ואז שואלים אם להמשיך את אותה שיחה או לפתוח שיחה
+        // חדשה שלא קשורה. אם אין תשובה ממתינה - פשוט מקליטים הודעה
+        // חדשה (שיחה חדשה) בלי לשאול כלום.
         const pendingReply = phone
           ? db
               .prepare(
@@ -28,13 +30,35 @@ async function handle(req, res) {
           : null;
         if (pendingReply) {
           db.prepare('UPDATE messages SET reply_heard = 1 WHERE id = ?').run(pendingReply.id);
+          session.updateSession(callId, {
+            step: 'choose_continue',
+            data: { threadId: pendingReply.thread_id || pendingReply.id },
+          });
+          return res.send(
+            combine(
+              sayText(['יש לך תשובה חדשה', pendingReply.reply_text]),
+              readDigits(
+                ['להמשיך את אותה שיחה הקש 1', 'לפתוח שיחה חדשה שלא קשורה הקש 2'],
+                'CONTINUE_CHOICE',
+                { max: 1 }
+              )
+            )
+          );
         }
-        session.updateSession(callId, { step: 'recording' });
+        session.updateSession(callId, { step: 'recording', data: { threadId: null } });
         return res.send(
-          combine(
-            pendingReply ? sayText(['יש לך תשובה חדשה', pendingReply.reply_text]) : null,
-            recordMessage(['אנא השאר את הודעתך אחרי הצליל', 'ולסיום ההקלטה שלך הקש סולמית'], 'MESSAGE_REC')
-          )
+          combine(recordMessage(['אנא השאר את הודעתך אחרי הצליל', 'ולסיום ההקלטה שלך הקש סולמית'], 'MESSAGE_REC'))
+        );
+      }
+
+      case 'choose_continue': {
+        const continueThread = p('CONTINUE_CHOICE') !== '2';
+        session.updateSession(callId, {
+          step: 'recording',
+          data: { threadId: continueThread ? sess.data.threadId : null },
+        });
+        return res.send(
+          combine(recordMessage(['אנא השאר את הודעתך אחרי הצליל', 'ולסיום ההקלטה שלך הקש סולמית'], 'MESSAGE_REC'))
         );
       }
 
@@ -43,6 +67,8 @@ async function handle(req, res) {
         const result = db
           .prepare('INSERT INTO messages (phone, recording_path) VALUES (?, ?)')
           .run(phone || null, recordingPath || null);
+        const threadId = sess.data.threadId || result.lastInsertRowid;
+        db.prepare('UPDATE messages SET thread_id = ? WHERE id = ?').run(threadId, result.lastInsertRowid);
 
         const adminUrl = `${config.appBaseUrl}/admin/messages`;
         mail

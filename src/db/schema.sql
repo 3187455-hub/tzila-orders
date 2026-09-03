@@ -137,5 +137,6 @@ CREATE TABLE IF NOT EXISTS messages (
   handled INTEGER NOT NULL DEFAULT 0,
   reply_text TEXT,
   reply_heard INTEGER NOT NULL DEFAULT 0,
+  thread_id INTEGER,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

@@ -1,7 +1,7 @@
 <%- include('partials/header', { title: 'הודעות', wide: true }) %>
 
 <h1>הודעות שהושארו</h1>
-<p style="color:#777; font-size:13px;">כל שיחה מקובצת לפי מספר טלפון. תשובה שתכתוב תושמע (בקול) ללקוח בפעם הבאה שהוא מתקשר לשלוחת השארת הודעה, ואז הוא יכול להשאיר הודעת המשך לאותה שיחה.</p>
+<p style="color:#777; font-size:13px;">תשובה שתכתוב תושמע (בקול) ללקוח בפעם הבאה שהוא מתקשר לשלוחת השארת הודעה - ואז הוא בוחר אם להמשיך את אותה שיחה או לפתוח שיחה חדשה שלא קשורה (ולכן אותו מספר טלפון יכול להופיע ביותר משיחה אחת).</p>
 <% if (flash) { %><div class="flash"><%= flash %></div><% } %>
 
 <% if (threads.length === 0) { %>
@@ -37,7 +37,7 @@
     <form method="post" action="/admin/messages/<%= t.latest.id %>/toggle-handled" class="inline">
       <button type="submit" class="<%= t.latest.handled ? '' : 'danger' %>"><%= t.latest.handled ? '✔ טופל' : 'סמן כטופל' %></button>
     </form>
-    <form method="post" action="/admin/messages/thread/<%= encodeURIComponent(t.phone) %>/delete" class="inline" onsubmit="return confirm('למחוק את כל השיחה הזו?')">
+    <form method="post" action="/admin/messages/thread/<%= t.threadId %>/delete" class="inline" onsubmit="return confirm('למחוק את כל השיחה הזו?')">
       <button type="submit" class="danger">מחק שיחה</button>
     </form>
   </p>

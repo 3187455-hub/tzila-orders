@@ -120,16 +120,17 @@ router.post('/settings', (req, res) => {
 
 // ---------- הודעות שהושארו בשלוחת "השארת הודעה" ----------
 router.get('/messages', (req, res) => {
-  // מקבצים לפי מספר טלפון - זה "צ'אט" אחד רציף להודעה חדשה, לא כל
-  // הקלטה בנפרד
-  const rows = db.prepare('SELECT * FROM messages ORDER BY phone, id ASC').all();
+  // מקבצים לפי thread_id - שיחה אחת רציפה, לא לפי מספר טלפון (המתקשר
+  // יכול לבחור לפתוח שיחה חדשה שלא קשורה גם מאותו מספר)
+  const rows = db.prepare('SELECT * FROM messages ORDER BY thread_id, id ASC').all();
   const threadsMap = new Map();
   for (const m of rows) {
-    const key = m.phone || `unknown-${m.id}`;
+    const key = m.thread_id || m.id;
     if (!threadsMap.has(key)) threadsMap.set(key, []);
     threadsMap.get(key).push(m);
   }
   const threads = [...threadsMap.values()].map((msgs) => ({
+    threadId: msgs[0].thread_id || msgs[0].id,
     phone: msgs[0].phone,
     messages: msgs,
     latest: msgs[msgs.length - 1],
@@ -138,8 +139,8 @@ router.get('/messages', (req, res) => {
   res.render('messages', { threads, flash: req.query.flash });
 });
 
-router.post('/messages/thread/:phone/delete', (req, res) => {
-  db.prepare('DELETE FROM messages WHERE phone = ?').run(req.params.phone);
+router.post('/messages/thread/:threadId/delete', (req, res) => {
+  db.prepare('DELETE FROM messages WHERE thread_id = ?').run(req.params.threadId);
   res.redirect('/admin/messages');
 });
 

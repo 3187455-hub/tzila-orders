@@ -58,4 +58,9 @@ if (!columnExists('messages', 'reply_text')) {
   db.exec('ALTER TABLE messages ADD COLUMN reply_heard INTEGER NOT NULL DEFAULT 0');
 }
 
+if (!columnExists('messages', 'thread_id')) {
+  db.exec('ALTER TABLE messages ADD COLUMN thread_id INTEGER');
+  db.exec('UPDATE messages SET thread_id = id WHERE thread_id IS NULL');
+}
+
 module.exports = db;
