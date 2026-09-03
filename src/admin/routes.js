@@ -153,13 +153,12 @@ router.post('/messages/:id/reply', (req, res) => {
   const replyText = (req.body.reply_text || '').trim();
   // reply_heard=0 - התשובה החדשה עוד לא נשמעה, תושמע ללקוח בשיחה הבאה שלו
   db.prepare('UPDATE messages SET reply_text = ?, reply_heard = 0 WHERE id = ?').run(replyText || null, req.params.id);
-  if (replyText) {
-    const message = db.prepare('SELECT phone FROM messages WHERE id = ?').get(req.params.id);
-    if (message && message.phone) {
-      tzintuk.sendTzintuk(message.phone).catch((e) => console.error('sendTzintuk failed', e));
-    }
+  const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(req.params.id);
+  if (replyText && message && message.phone) {
+    tzintuk.sendTzintuk(message.phone).catch((e) => console.error('sendTzintuk failed', e));
   }
-  res.redirect('/admin/messages');
+  const threadId = message ? message.thread_id || message.id : '';
+  res.redirect(`/admin/messages?thread=${threadId}`);
 });
 
 router.post('/messages/:id/toggle-handled', (req, res) => {
@@ -167,7 +166,8 @@ router.post('/messages/:id/toggle-handled', (req, res) => {
   if (message) {
     db.prepare('UPDATE messages SET handled = ? WHERE id = ?').run(message.handled ? 0 : 1, message.id);
   }
-  res.redirect('/admin/messages');
+  const threadId = message ? message.thread_id || message.id : '';
+  res.redirect(`/admin/messages?thread=${threadId}`);
 });
 
 router.get('/messages/:id/recording', async (req, res) => {
